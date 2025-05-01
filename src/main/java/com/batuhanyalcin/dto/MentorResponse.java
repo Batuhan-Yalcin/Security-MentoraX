@@ -38,5 +38,5 @@ public class MentorResponse {
     private int totalStudents;
     private int totalAssignmentsToReview;
     private int completedReviews;
-    private double averageReviewTime; // saat cinsinden
+    private double averageReviewTime;
 } 

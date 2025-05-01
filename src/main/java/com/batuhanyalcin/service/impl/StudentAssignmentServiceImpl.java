@@ -21,8 +21,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.batuhanyalcin.exception.AssignmentNotFoundException;
 import com.batuhanyalcin.exception.FileUploadException;
+import com.batuhanyalcin.exception.StudentNotFoundException;
 import com.batuhanyalcin.exception.UnauthorizedAccessException;
 import com.batuhanyalcin.model.Assignment;
+import com.batuhanyalcin.model.Student;
 import com.batuhanyalcin.repository.AssignmentRepository;
 import com.batuhanyalcin.repository.StudentRepository;
 import com.batuhanyalcin.repository.UserRepository;
@@ -115,5 +117,30 @@ public class StudentAssignmentServiceImpl implements StudentAssignmentService {
         } catch (IOException ex) {
             throw new FileUploadException("Dosya indirilemedi", ex);
         }
+    }
+    
+    @Override
+    public Student getStudentProfile() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Student student = studentRepository.findByUserUsername(username)
+                .orElseThrow(() -> new StudentNotFoundException("Öğrenci bulunamadı: " + username));
+        
+       
+        student.getUser().setPassword(null);
+        
+        return student;
+    }
+    
+    @Override
+    public Assignment getAssignmentById(Long id) {
+        String studentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        Assignment assignment = assignmentRepository.findById(id)
+                .orElseThrow(() -> new AssignmentNotFoundException("Ödev bulunamadı"));
+
+        if (!assignment.getStudent().getUser().getUsername().equals(studentUsername)) {
+            throw new UnauthorizedAccessException("Bu ödevi görüntüleme yetkiniz yok");
+        }
+        
+        return assignment;
     }
 }

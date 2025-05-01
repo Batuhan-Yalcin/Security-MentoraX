@@ -1,3 +1,4 @@
+
 package com.batuhanyalcin.model;
 
 public enum UserRole {
