@@ -66,6 +66,7 @@ Mentora, mentorluk sistemi için geliştirilmiş bir Spring Boot uygulamasıdır
 - Spring Validation
 - Spring Exception Handling
 - Spring Security
+- Spring Junit5 - Mockito
 - JWT Authentication
 - JPA/Hibernate
 - Lombok
