@@ -9,6 +9,6 @@ import com.batuhanyalcin.model.Assignment;
 
 public interface StudentAssignmentService {
     List<Assignment> getAssignments();
-    Assignment uploadAssignment(MultipartFile file);
+    Assignment uploadAssignment(MultipartFile file, String title, String description);
     ResponseEntity<byte[]> downloadAssignment(Long id);
 } 

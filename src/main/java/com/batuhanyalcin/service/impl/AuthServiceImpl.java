@@ -11,7 +11,11 @@ import com.batuhanyalcin.dto.RegisterRequest;
 import com.batuhanyalcin.exception.UserAlreadyExistsException;
 import com.batuhanyalcin.exception.UserNotFoundException;
 import com.batuhanyalcin.jwt.JwtService;
+import com.batuhanyalcin.model.Mentor;
+import com.batuhanyalcin.model.Student;
 import com.batuhanyalcin.model.User;
+import com.batuhanyalcin.repository.MentorRepository;
+import com.batuhanyalcin.repository.StudentRepository;
 import com.batuhanyalcin.repository.UserRepository;
 import com.batuhanyalcin.service.AuthService;
 
@@ -22,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
+    private final MentorRepository mentorRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -35,15 +41,39 @@ public class AuthServiceImpl implements AuthService {
             throw new UserAlreadyExistsException("Bu e-posta adresi zaten kullanılıyor");
         }
 
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        
         var user = User.builder()
                 .username(request.getUsername())
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(encodedPassword)
                 .role(request.getRole())
                 .build();
-        userRepository.save(user);
+        
+        user = userRepository.save(user);
+
+        // Role'e göre ilgili entity'yi oluştur
+        switch (request.getRole()) {
+            case STUDENT:
+                var student = new Student();
+                student.setUser(user);
+                student.setDepartment(request.getDepartment());
+                student.setStudentNumber(request.getStudentNumber());
+                studentRepository.save(student);
+                break;
+            case MENTOR:
+                var mentor = new Mentor();
+                mentor.setUser(user);
+                mentor.setBio(request.getBio());
+                mentor.setExpertise(request.getExpertise());
+                mentorRepository.save(mentor);
+                break;
+            default:
+                break;
+        }
+
         var jwtToken = jwtService.generateToken(user);
         return AuthResponse.builder()
                 .token(jwtToken)

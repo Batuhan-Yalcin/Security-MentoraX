@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,7 +37,24 @@ public class StudentAssignmentController {
     @ApiResponse(responseCode = "200", description = "Ödevler başarıyla listelendi")
     @ApiResponse(responseCode = "401", description = "Yetkisiz erişim")
     public ResponseEntity<List<Assignment>> getAssignments() {
-        return ResponseEntity.ok(studentAssignmentService.getAssignments());
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        System.out.println("Getting assignments for user: " + username);
+        
+        List<Assignment> assignments = studentAssignmentService.getAssignments();
+        System.out.println("Found " + assignments.size() + " assignments");
+        
+        assignments.forEach(assignment -> {
+            System.out.println("Assignment details:");
+            System.out.println("- ID: " + assignment.getId());
+            System.out.println("- Title: " + assignment.getTitle());
+            System.out.println("- Description: " + assignment.getDescription());
+            System.out.println("- File Name: " + assignment.getFileName());
+            System.out.println("- Student: " + assignment.getStudent().getUser().getUsername());
+            System.out.println("- Submission Date: " + assignment.getSubmissionDate());
+            System.out.println("--------------------");
+        });
+        
+        return ResponseEntity.ok(assignments);
     }
 
     @PostMapping
@@ -44,8 +62,11 @@ public class StudentAssignmentController {
     @ApiResponse(responseCode = "200", description = "Ödev başarıyla yüklendi")
     @ApiResponse(responseCode = "400", description = "Geçersiz dosya")
     @ApiResponse(responseCode = "401", description = "Yetkisiz erişim")
-    public ResponseEntity<Assignment> uploadAssignment(@RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(studentAssignmentService.uploadAssignment(file));
+    public ResponseEntity<Assignment> uploadAssignment(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description) {
+        return ResponseEntity.ok(studentAssignmentService.uploadAssignment(file, title, description));
     }
 
     @GetMapping("/{id}/download")

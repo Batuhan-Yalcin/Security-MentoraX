@@ -57,7 +57,7 @@ public class StudentAssignmentServiceImpl implements StudentAssignmentService {
     }
 
     @Override
-    public Assignment uploadAssignment(MultipartFile file) {
+    public Assignment uploadAssignment(MultipartFile file, String title, String description) {
         String studentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
         
@@ -71,6 +71,8 @@ public class StudentAssignmentServiceImpl implements StudentAssignmentService {
             Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
 
             Assignment assignment = Assignment.builder()
+                    .title(title)
+                    .description(description)
                     .fileName(fileName)
                     .filePath(targetLocation.toString())
                     .student(userRepository.findByUsername(studentUsername)

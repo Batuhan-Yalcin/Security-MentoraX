@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.batuhanyalcin.dto.AuthResponse;
 import com.batuhanyalcin.dto.LoginRequest;
 import com.batuhanyalcin.dto.RegisterRequest;
+import com.batuhanyalcin.model.UserRole;
 import com.batuhanyalcin.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,12 +25,33 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @PostMapping("/register")
-    @Operation(summary = "Kullanıcı kaydı", description = "Yeni bir kullanıcı kaydı oluşturur")
-    @ApiResponse(responseCode = "200", description = "Kullanıcı başarıyla kaydedildi")
+    @PostMapping("/register/student")
+    @Operation(summary = "Öğrenci kaydı", description = "Yeni bir öğrenci kaydı oluşturur")
+    @ApiResponse(responseCode = "200", description = "Öğrenci başarıyla kaydedildi")
     @ApiResponse(responseCode = "400", description = "Geçersiz istek")
     @ApiResponse(responseCode = "409", description = "Kullanıcı zaten mevcut")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<AuthResponse> registerStudent(@RequestBody RegisterRequest request) {
+        request.setRole(UserRole.STUDENT);
+        return ResponseEntity.ok(authService.register(request));
+    }
+
+    @PostMapping("/register/mentor")
+    @Operation(summary = "Mentor kaydı", description = "Yeni bir mentor kaydı oluşturur")
+    @ApiResponse(responseCode = "200", description = "Mentor başarıyla kaydedildi")
+    @ApiResponse(responseCode = "400", description = "Geçersiz istek")
+    @ApiResponse(responseCode = "409", description = "Kullanıcı zaten mevcut")
+    public ResponseEntity<AuthResponse> registerMentor(@RequestBody RegisterRequest request) {
+        request.setRole(UserRole.MENTOR);
+        return ResponseEntity.ok(authService.register(request));
+    }
+
+    @PostMapping("/register/admin")
+    @Operation(summary = "Admin kaydı", description = "Yeni bir admin kaydı oluşturur")
+    @ApiResponse(responseCode = "200", description = "Admin başarıyla kaydedildi")
+    @ApiResponse(responseCode = "400", description = "Geçersiz istek")
+    @ApiResponse(responseCode = "409", description = "Kullanıcı zaten mevcut")
+    public ResponseEntity<AuthResponse> registerAdmin(@RequestBody RegisterRequest request) {
+        request.setRole(UserRole.ADMIN);
         return ResponseEntity.ok(authService.register(request));
     }
 
