@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { 
-  Box, 
-  Typography, 
-  Paper, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  CircularProgress, 
-  Alert, 
-  Button, 
-  TextField, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions,
-  Divider,
-  Card,
-  CardContent,
+    Box, 
+    Typography, 
+    Paper, 
+    List, 
+    ListItem, 
+    ListItemText, 
+    CircularProgress, 
+    Alert, 
+    Button, 
+    TextField, 
+    Dialog, 
+    DialogTitle, 
+    DialogContent, 
+    DialogActions,
+    Divider,
+    Card,
+    CardContent,
   Grid,
   InputAdornment,
   Avatar,
@@ -188,8 +188,8 @@ const glowingBorder = keyframes`
 
 // Temel stiller için
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  margin: theme.spacing(2),
-  padding: theme.spacing(3),
+    margin: theme.spacing(2),
+    padding: theme.spacing(3),
   borderRadius: '16px',
   boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
   transition: 'all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)',
@@ -208,9 +208,9 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
     opacity: 0,
     transition: 'opacity 0.3s ease',
   },
-  '&:hover': {
+    '&:hover': {
     boxShadow: '0 15px 40px rgba(0, 0, 0, 0.2)',
-    transform: 'translateY(-5px)',
+        transform: 'translateY(-5px)',
     '&::before': {
       opacity: 1,
     },
@@ -419,25 +419,25 @@ const ActionButton = styled(Button)(({ theme }) => ({
 
 // Tip tanımlamaları
 interface Student {
-  id: number;
-  firstName: string;
-  lastName: string;
-  studentNumber?: string;
-  username: string;
-  email?: string;
+    id: number;
+    firstName: string;
+    lastName: string;
+    studentNumber?: string;
+    username: string;
+    email?: string;
 }
 
 interface Assignment {
-  id: number;
-  title?: string;
-  description?: string;
-  submissionDate: string;
-  feedback?: string;
-  grade?: number;
-  fileName?: string;
-  student: {
     id: number;
-  };
+    title?: string;
+    description?: string;
+    submissionDate: string;
+    feedback?: string;
+    grade?: number;
+    fileName?: string;
+    student: {
+        id: number;
+    };
 }
 
 // Örnek veri - API başarısız olduğunda test için kullanılacak
@@ -502,16 +502,16 @@ const SAMPLE_ASSIGNMENTS = [
 ];
 
 const MentorDashboard: React.FC = () => {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
-  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-  const [feedback, setFeedback] = useState('');
-  const [grade, setGrade] = useState('');
-  const [error, setError] = useState<string | null>(null);
+    const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+    const [feedback, setFeedback] = useState('');
+    const [grade, setGrade] = useState('');
+    const [error, setError] = useState<string | null>(null);
   
   // İstatistik bilgileri
   const [stats, setStats] = useState({
@@ -527,15 +527,15 @@ const MentorDashboard: React.FC = () => {
   // Animasyon gecikmeleri için
   const [loaded, setLoaded] = useState(false);
 
-  // Oturum durumunu kontrol et
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    
-    if (!token || role !== 'MENTOR') {
-      console.error('Geçersiz token veya yetki:', { token: !!token, role });
-      navigate('/login');
-    }
+    // Oturum durumunu kontrol et
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const role = localStorage.getItem('role');
+        
+        if (!token || role !== 'MENTOR') {
+            console.error('Geçersiz token veya yetki:', { token: !!token, role });
+            navigate('/login');
+        }
     
     // Sayfa yüklenme animasyonu
     const timer = setTimeout(() => {
@@ -543,18 +543,18 @@ const MentorDashboard: React.FC = () => {
     }, 300);
     
     return () => clearTimeout(timer);
-  }, [navigate]);
+    }, [navigate]);
 
   // Öğrencileri getir - getStudentIds (daha fazla öğrenci için) kullanılıyor
-  const { 
-    data: students, 
-    isLoading: studentsLoading, 
-    error: studentsError,
-    refetch: refetchStudents
-  } = useQuery({
-    queryKey: ['mentor-students'],
-    queryFn: async () => {
-      try {
+    const { 
+        data: students, 
+        isLoading: studentsLoading, 
+        error: studentsError,
+        refetch: refetchStudents 
+    } = useQuery({
+        queryKey: ['mentor-students'],
+        queryFn: async () => {
+            try {
         console.log('Öğrenciler getiriliyor...');
         
         // Önce all-students endpoint'ini deneyelim
@@ -565,10 +565,10 @@ const MentorDashboard: React.FC = () => {
           if (response.data && Array.isArray(response.data) && response.data.length > 0) {
             return response.data.map((user: any) => ({
               id: user.id || Math.random(),
-              username: user.username || '',
-              firstName: user.firstName || '',
-              lastName: user.lastName || '',
-              email: user.email || '',
+                        username: user.username || '',
+                        firstName: user.firstName || '',
+                        lastName: user.lastName || '',
+                        email: user.email || '',
               studentNumber: user.student?.studentNumber || `S${user.id || Math.random()}`
             }));
           } else {
@@ -580,10 +580,10 @@ const MentorDashboard: React.FC = () => {
             if (fallbackResponse.data && Array.isArray(fallbackResponse.data) && fallbackResponse.data.length > 0) {
               return fallbackResponse.data.map((user: any) => ({
                 id: user.id || Math.random(),
-                username: user.username || '',
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                email: user.email || '',
+                                username: user.username || '',
+                                firstName: user.firstName || '',
+                                lastName: user.lastName || '',
+                                email: user.email || '',
                 studentNumber: user.student?.studentNumber || `S${user.id || Math.random()}`
               }));
             }
@@ -613,13 +613,13 @@ const MentorDashboard: React.FC = () => {
         // Her iki endpoint de başarısız oldu veya boş veri döndü
         console.log('Gerçek API çağrıları başarısız oldu, örnek veri kullanılıyor');
         return SAMPLE_STUDENTS; // Örnek veri kullan
-      } catch (err: any) {
+            } catch (err: any) {
         console.error('Öğrenciler alınırken genel hata oluştu:', err);
-        setError(`Öğrenciler alınırken hata oluştu: ${err.message}`);
+                setError(`Öğrenciler alınırken hata oluştu: ${err.message}`);
         return SAMPLE_STUDENTS; // Hata durumunda örnek veri kullan
-      }
-    },
-    retry: 1,
+            }
+        },
+        retry: 1,
     retryDelay: 1000,
     staleTime: 300000,
   });
@@ -636,46 +636,46 @@ const MentorDashboard: React.FC = () => {
     );
   }, [students, searchTerm]);
 
-  // Ödevleri getir
-  const { 
-    data: assignments, 
-    isLoading: assignmentsLoading, 
-    error: assignmentsError,
-    refetch: refetchAssignments 
-  } = useQuery({
-    queryKey: ['mentor-assignments', selectedStudent],
-    queryFn: async () => {
-      if (!selectedStudent) return [];
-      
-      try {
-        const response = await api.get(`mentor/assignments/${selectedStudent}`);
-        
+    // Ödevleri getir
+    const { 
+        data: assignments, 
+        isLoading: assignmentsLoading, 
+        error: assignmentsError,
+        refetch: refetchAssignments 
+    } = useQuery({
+        queryKey: ['mentor-assignments', selectedStudent],
+        queryFn: async () => {
+            if (!selectedStudent) return [];
+            
+            try {
+                const response = await api.get(`mentor/assignments/${selectedStudent}`);
+                
         if (Array.isArray(response.data) && response.data.length > 0) {
-          return response.data.map((assignment: any) => ({
-            id: assignment.id,
-            title: assignment.title || `Ödev #${assignment.id}`,
-            description: assignment.description || '',
-            submissionDate: assignment.submissionDate || new Date().toISOString(),
-            feedback: assignment.feedback || '',
-            grade: assignment.grade,
-            fileName: assignment.fileName || '',
-            student: {
-              id: selectedStudent
-            }
-          }));
-        }
-        
+                    return response.data.map((assignment: any) => ({
+                        id: assignment.id,
+                        title: assignment.title || `Ödev #${assignment.id}`,
+                        description: assignment.description || '',
+                        submissionDate: assignment.submissionDate || new Date().toISOString(),
+                        feedback: assignment.feedback || '',
+                        grade: assignment.grade,
+                        fileName: assignment.fileName || '',
+                        student: {
+                            id: selectedStudent
+                        }
+                    }));
+                }
+                
         // API başarısız olduğunda veya veri dönmediğinde örnek verileri kullan
         console.log('Ödevler için API başarısız oldu veya boş veri döndü, örnek veriler kullanılıyor');
         return SAMPLE_ASSIGNMENTS; // Örnek veri kullan
-      } catch (err: any) {
-        console.error('Ödevler alınırken hata oluştu:', err);
-        setError(`Ödevler alınırken hata oluştu: ${err.message}`);
+            } catch (err: any) {
+                console.error('Ödevler alınırken hata oluştu:', err);
+                setError(`Ödevler alınırken hata oluştu: ${err.message}`);
         return SAMPLE_ASSIGNMENTS; // Hata durumunda örnek veri kullan
-      }
-    },
-    enabled: !!selectedStudent,
-    retry: 1,
+            }
+        },
+        enabled: !!selectedStudent,
+        retry: 1,
   });
 
   // İstatistik verilerini güncelle
@@ -704,67 +704,67 @@ const MentorDashboard: React.FC = () => {
     }
   }, [assignments]);
 
-  // Ödev değerlendirme
-  const { mutate: updateAssignment, isPending } = useMutation({
-    mutationFn: async (data: { assignmentId: number; feedback: string; grade: number }) => {
-      try {
-        const response = await api.put(
-          `mentor/assignments/${data.assignmentId}/feedback?feedback=${encodeURIComponent(data.feedback)}&grade=${data.grade}`
-        );
-        return response.data;
-      } catch (err: any) {
-        console.error('Değerlendirme sırasında hata oluştu:', err);
-        setError(`Değerlendirme sırasında hata oluştu: ${err.message}`);
-        throw err;
-      }
-    },
-    onSuccess: () => {
-      refetchAssignments();
-      setSelectedAssignment(null);
-      setFeedback('');
-      setGrade('');
-      setError(null);
-    },
-    onError: (err: any) => {
-      console.error('Ödev değerlendirme hatası:', err);
-      setError(`Ödev değerlendirme hatası: ${err.message}`);
-    }
-  });
+    // Ödev değerlendirme
+    const { mutate: updateAssignment, isPending } = useMutation({
+        mutationFn: async (data: { assignmentId: number; feedback: string; grade: number }) => {
+            try {
+                const response = await api.put(
+                    `mentor/assignments/${data.assignmentId}/feedback?feedback=${encodeURIComponent(data.feedback)}&grade=${data.grade}`
+                );
+                return response.data;
+            } catch (err: any) {
+                console.error('Değerlendirme sırasında hata oluştu:', err);
+                setError(`Değerlendirme sırasında hata oluştu: ${err.message}`);
+                throw err;
+            }
+        },
+        onSuccess: () => {
+            refetchAssignments();
+            setSelectedAssignment(null);
+            setFeedback('');
+            setGrade('');
+            setError(null);
+        },
+        onError: (err: any) => {
+            console.error('Ödev değerlendirme hatası:', err);
+            setError(`Ödev değerlendirme hatası: ${err.message}`);
+        }
+    });
 
   const handleSelectStudent = (studentId: number) => {
     setSelectedStudent(studentId);
   };
 
-  const handleOpenDialog = (assignment: Assignment) => {
-    setSelectedAssignment(assignment);
-    setFeedback(assignment.feedback || '');
-    setGrade(assignment.grade?.toString() || '');
-  };
+    const handleOpenDialog = (assignment: Assignment) => {
+        setSelectedAssignment(assignment);
+        setFeedback(assignment.feedback || '');
+        setGrade(assignment.grade?.toString() || '');
+    };
 
-  const handleCloseDialog = () => {
-    setSelectedAssignment(null);
-    setFeedback('');
-    setGrade('');
-  };
+    const handleCloseDialog = () => {
+        setSelectedAssignment(null);
+        setFeedback('');
+        setGrade('');
+    };
 
-  const handleSubmit = () => {
-    if (selectedAssignment && feedback && grade) {
-      updateAssignment({
-        assignmentId: selectedAssignment.id,
-        feedback,
-        grade: parseInt(grade),
-      });
-    } else {
-      setError('Lütfen gerekli alanları doldurun');
-    }
-  };
+    const handleSubmit = () => {
+        if (selectedAssignment && feedback && grade) {
+            updateAssignment({
+                assignmentId: selectedAssignment.id,
+                feedback,
+                grade: parseInt(grade),
+            });
+        } else {
+            setError('Lütfen gerekli alanları doldurun');
+        }
+    };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('username');
-    navigate('/login');
-  };
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('username');
+        navigate('/login');
+    };
 
   // Dosyayı indirme fonksiyonu
   const handleDownloadFile = async (assignmentId: number, fileName: string) => {
@@ -794,8 +794,8 @@ const MentorDashboard: React.FC = () => {
     }
   };
 
-  if (studentsLoading) {
-    return (
+    if (studentsLoading) {
+        return (
       <Box 
         display="flex" 
         flexDirection="column"
@@ -812,12 +812,12 @@ const MentorDashboard: React.FC = () => {
         </Typography>
         <Typography variant="body1" color="textSecondary">
           Öğrenci verileri alınıyor, lütfen bekleyin...
-        </Typography>
-      </Box>
-    );
-  }
+                </Typography>
+            </Box>
+        );
+    }
 
-  return (
+    return (
     <Box 
       sx={{ 
         minHeight: '100vh',
@@ -912,14 +912,14 @@ const MentorDashboard: React.FC = () => {
                 textAlign: { xs: 'center', sm: 'left' }
               }}
             >
-              Mentor Paneli
-            </Typography>
+                    Mentor Paneli
+                </Typography>
           </Box>
           
           <ActionButton
-            variant="contained" 
-            color="secondary" 
-            onClick={handleLogout}
+                    variant="contained" 
+                    color="secondary" 
+                    onClick={handleLogout}
             startIcon={<LogoutIcon />}
             sx={{ 
               minWidth: '150px',
@@ -944,12 +944,12 @@ const MentorDashboard: React.FC = () => {
                 transform: 'scale(1) rotate(30deg)'
               }
             }}
-          >
-            Çıkış Yap
+                >
+                    Çıkış Yap
           </ActionButton>
-        </Box>
+            </Box>
 
-        {error && (
+            {error && (
           <Alert 
             severity="error" 
             sx={{ 
@@ -963,10 +963,10 @@ const MentorDashboard: React.FC = () => {
             }} 
             onClose={() => setError(null)}
           >
-            {error}
-          </Alert>
-        )}
-        
+                    {error}
+                </Alert>
+            )}
+
         {/* İstatistik Kartları */}
         <Box sx={{ 
           display: 'flex', 
@@ -1257,7 +1257,7 @@ const MentorDashboard: React.FC = () => {
                   filter: 'drop-shadow(0 2px 4px rgba(63, 81, 181, 0.3))',
                   animation: `${float} 3s infinite ease-in-out`
                 }} /> 
-                Öğrencilerim
+                            Öğrencilerim
                 {filteredStudents?.length > 0 && (
                   <Badge 
                     badgeContent={filteredStudents.length} 
@@ -1271,7 +1271,7 @@ const MentorDashboard: React.FC = () => {
                     }}
                   />
                 )}
-              </Typography>
+                        </Typography>
               
               {/* Arama kutusu */}
               <SearchBox
@@ -1317,16 +1317,16 @@ const MentorDashboard: React.FC = () => {
                 border: 'none'
               }} />
               
-              {studentsError ? (
+                        {studentsError ? (
                 <Alert severity="error" sx={{ 
                   borderRadius: '10px',
                   backdropFilter: 'blur(8px)',
                   background: 'rgba(244, 67, 54, 0.05)',
                   border: '1px solid rgba(244, 67, 54, 0.2)',
                 }}>
-                  Öğrenciler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.
-                </Alert>
-              ) : !students || !Array.isArray(students) || students.length === 0 ? (
+                                Öğrenciler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.
+                            </Alert>
+                        ) : !students || !Array.isArray(students) || students.length === 0 ? (
                 <Box textAlign="center" py={4}>
                   <PersonIcon sx={{ 
                     fontSize: 60, 
@@ -1335,8 +1335,8 @@ const MentorDashboard: React.FC = () => {
                     animation: `${float} 3s infinite ease-in-out`
                   }} />
                   <Typography variant="body1" color="text.secondary" gutterBottom>
-                    Henüz size atanmış öğrenci bulunmuyor.
-                  </Typography>
+                                Henüz size atanmış öğrenci bulunmuyor.
+                            </Typography>
                 </Box>
               ) : filteredStudents.length === 0 ? (
                 <Box textAlign="center" py={4}>
@@ -1371,16 +1371,16 @@ const MentorDashboard: React.FC = () => {
                     }
                   }
                 }}>
-                  <List>
+                            <List>
                     {filteredStudents.map((student, index) => (
-                      <ListItem 
-                        key={student.id}
-                        onClick={() => handleSelectStudent(student.id)}
-                        sx={{ 
+                                    <ListItem 
+                                        key={student.id}
+                                        onClick={() => handleSelectStudent(student.id)}
+                                        sx={{ 
                           animation: `${fadeIn} ${0.2 + index * 0.1}s ease-out`,
                           bgcolor: selectedStudent === student.id ? 'rgba(63, 81, 181, 0.08)' : 'rgba(255, 255, 255, 0.6)',
                           backdropFilter: 'blur(10px)',
-                          '&:hover': {
+                                            '&:hover': {
                             bgcolor: selectedStudent === student.id ? 'rgba(63, 81, 181, 0.12)' : 'rgba(0, 0, 0, 0.03)',
                             transform: 'translateX(5px) scale(1.01)',
                           },
@@ -1426,7 +1426,7 @@ const MentorDashboard: React.FC = () => {
                               : <PersonIcon />}
                           </Avatar>
                         </ListItemAvatar>
-                        <ListItemText
+                                        <ListItemText
                           primary={
                             <Box display="flex" alignItems="center">
                               <Typography 
@@ -1482,13 +1482,13 @@ const MentorDashboard: React.FC = () => {
                               )}
                             </>
                           }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
+                                        />
+                                    </ListItem>
+                                ))}
+                            </List>
                 </Box>
-              )}
-            </StyledPaper>
+                        )}
+                    </StyledPaper>
           </Box>
           
           {/* Ödev Listesi */}
@@ -1529,8 +1529,8 @@ const MentorDashboard: React.FC = () => {
                     filter: 'drop-shadow(0 2px 4px rgba(63, 81, 181, 0.3))',
                     animation: `${float} 3s infinite ease-in-out`
                   }} /> 
-                  Değerlendirilecek Ödevler
-                </Typography>
+                            Değerlendirilecek Ödevler
+                        </Typography>
                 {selectedStudent && assignments && Array.isArray(assignments) && (
                   <Chip 
                     icon={<AssignmentIcon />}
@@ -1554,8 +1554,8 @@ const MentorDashboard: React.FC = () => {
                 height: '2px',
                 border: 'none'
               }} />
-              
-              {!selectedStudent ? (
+                        
+                        {!selectedStudent ? (
                 <Box py={6} textAlign="center">
                   <AssignmentIcon sx={{ 
                     fontSize: 80, 
@@ -1574,7 +1574,7 @@ const MentorDashboard: React.FC = () => {
                     }}
                   >
                     Lütfen ödevlerini görmek için bir öğrenci seçin
-                  </Typography>
+                            </Typography>
                   <Typography 
                     variant="body2" 
                     color="text.secondary" 
@@ -1588,7 +1588,7 @@ const MentorDashboard: React.FC = () => {
                     Sol taraftaki listeden bir öğrenci seçerek ödevlerini inceleyebilirsiniz.
                   </Typography>
                 </Box>
-              ) : assignmentsLoading ? (
+                        ) : assignmentsLoading ? (
                 <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={5}>
                   <CircularProgress 
                     size={50} 
@@ -1606,8 +1606,8 @@ const MentorDashboard: React.FC = () => {
                   >
                     Ödevler yükleniyor...
                   </Typography>
-                </Box>
-              ) : assignmentsError ? (
+                            </Box>
+                        ) : assignmentsError ? (
                 <Alert 
                   severity="error" 
                   sx={{ 
@@ -1617,9 +1617,9 @@ const MentorDashboard: React.FC = () => {
                     border: '1px solid rgba(244, 67, 54, 0.2)'
                   }}
                 >
-                  Ödevler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.
-                </Alert>
-              ) : !assignments || !Array.isArray(assignments) || assignments.length === 0 ? (
+                                Ödevler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.
+                            </Alert>
+                        ) : !assignments || !Array.isArray(assignments) || assignments.length === 0 ? (
                 <Box py={6} textAlign="center">
                   <AssignmentIcon sx={{ 
                     fontSize: 80, 
@@ -1635,7 +1635,7 @@ const MentorDashboard: React.FC = () => {
                     sx={{ fontWeight: 500 }}
                   >
                     Bu öğrencinin henüz ödevi bulunmuyor
-                  </Typography>
+                            </Typography>
                   <Typography variant="body2" color="text.secondary">
                     Öğrenci henüz ödev yüklememiş görünüyor.
                   </Typography>
@@ -1721,8 +1721,8 @@ const MentorDashboard: React.FC = () => {
                                 WebkitTextFillColor: 'transparent',
                               }}
                             >
-                              {assignment.title || `Ödev #${assignment.id}`}
-                            </Typography>
+                                                        {assignment.title || `Ödev #${assignment.id}`}
+                                                    </Typography>
                             {assignment.grade !== undefined && assignment.grade !== null ? (
                               <Chip 
                                 label={`${assignment.grade}/100`} 
@@ -1779,7 +1779,7 @@ const MentorDashboard: React.FC = () => {
                           >
                             <AccessTimeIcon fontSize="small" sx={{ mr: 0.5, opacity: 0.7 }} />
                             Teslim: {new Date(assignment.submissionDate).toLocaleDateString('tr-TR')}
-                          </Typography>
+                                                    </Typography>
                           
                           <Box 
                             display="flex" 
@@ -1808,7 +1808,7 @@ const MentorDashboard: React.FC = () => {
                               }}
                             >
                               {assignment.fileName || 'Ödev Dosyası'}
-                            </Typography>
+                                                    </Typography>
                             <Tooltip title="Dosyayı İndir">
                               <IconButton 
                                 size="small" 
@@ -1829,8 +1829,8 @@ const MentorDashboard: React.FC = () => {
                               </IconButton>
                             </Tooltip>
                           </Box>
-                          
-                          {assignment.description && (
+                                                    
+                                                    {assignment.description && (
                             <Typography 
                               variant="body2" 
                               sx={{ 
@@ -1846,11 +1846,11 @@ const MentorDashboard: React.FC = () => {
                                 fontSize: '0.875rem'
                               }}
                             >
-                              {assignment.description}
-                            </Typography>
-                          )}
-                          
-                          {assignment.feedback && (
+                                                            {assignment.description}
+                                                        </Typography>
+                                                    )}
+                                                    
+                                                    {assignment.feedback && (
                             <Box 
                               mt={2} 
                               p={1.5} 
@@ -1880,8 +1880,8 @@ const MentorDashboard: React.FC = () => {
                               }}
                             >
                               <Typography variant="subtitle2" color="primary" fontWeight="bold">
-                                Geri Bildirim:
-                              </Typography>
+                                                                Geri Bildirim:
+                                                            </Typography>
                               <Typography 
                                 variant="body2"
                                 sx={{
@@ -1894,18 +1894,18 @@ const MentorDashboard: React.FC = () => {
                                   zIndex: 1
                                 }}
                               >
-                                {assignment.feedback}
-                              </Typography>
-                            </Box>
-                          )}
-                        </CardContent>
+                                                                {assignment.feedback}
+                                                            </Typography>
+                                                        </Box>
+                                                    )}
+                                                </CardContent>
                         
                         <CardActions sx={{ justifyContent: 'flex-end', pt: 0, pb: 2, px: 2 }}>
                           <ActionButton 
-                            variant="contained" 
-                            color="primary"
-                            size="small"
-                            onClick={() => handleOpenDialog(assignment)}
+                                                        variant="contained" 
+                                                        color="primary"
+                                                        size="small"
+                                                        onClick={() => handleOpenDialog(assignment)}
                             startIcon={assignment.feedback ? <EditIcon /> : <CheckCircleIcon />}
                             sx={{
                               background: 'linear-gradient(45deg, #4ECDC4, #1A535C)',
@@ -1931,16 +1931,16 @@ const MentorDashboard: React.FC = () => {
                                 animation: `${shine} 3s infinite`
                               }
                             }}
-                          >
-                            {assignment.feedback ? 'Düzenle' : 'Değerlendir'}
+                                                    >
+                                                        {assignment.feedback ? 'Düzenle' : 'Değerlendir'}
                           </ActionButton>
                         </CardActions>
                       </StyledCard>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </StyledPaper>
+                                                </Box>
+                                    ))}
+                            </Box>
+                        )}
+                    </StyledPaper>
           </Box>
         </Box>
       </Container>
@@ -2229,15 +2229,15 @@ const MentorDashboard: React.FC = () => {
             </>
           )}
           
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            label="Geri Bildirim"
-            value={feedback}
-            onChange={(e) => setFeedback(e.target.value)}
-            margin="normal"
-            required
+                    <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        label="Geri Bildirim"
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        margin="normal"
+                        required
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
@@ -2261,16 +2261,16 @@ const MentorDashboard: React.FC = () => {
                 borderColor: 'rgba(78, 205, 196, 0.3)'
               }
             }}
-          />
-          <TextField
-            fullWidth
-            type="number"
-            label="Not"
-            value={grade}
-            onChange={(e) => setGrade(e.target.value)}
-            margin="normal"
-            required
-            inputProps={{ min: 0, max: 100 }}
+                    />
+                    <TextField
+                        fullWidth
+                        type="number"
+                        label="Not"
+                        value={grade}
+                        onChange={(e) => setGrade(e.target.value)}
+                        margin="normal"
+                        required
+                        inputProps={{ min: 0, max: 100 }}
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: '12px',
@@ -2314,7 +2314,7 @@ const MentorDashboard: React.FC = () => {
               Puanlama 0-100 arasında olmalıdır.
             </Typography>
           </Box>
-        </DialogContent>
+                </DialogContent>
         <DialogActions sx={{ 
           px: 3, 
           py: 2.5, 
@@ -2323,7 +2323,7 @@ const MentorDashboard: React.FC = () => {
           backdropFilter: 'blur(5px)', 
           borderTop: '1px solid rgba(0, 0, 0, 0.05)'
         }}>
-          <Button 
+                    <Button 
             onClick={handleCloseDialog}
             variant="outlined"
             sx={{ 
@@ -2342,10 +2342,10 @@ const MentorDashboard: React.FC = () => {
             İptal
           </Button>
           <ActionButton 
-            onClick={handleSubmit} 
-            variant="contained" 
-            color="primary"
-            disabled={isPending || !feedback || !grade}
+                        onClick={handleSubmit} 
+                        variant="contained" 
+                        color="primary"
+                        disabled={isPending || !feedback || !grade}
             sx={{ 
               minWidth: '120px',
               px: 3,
@@ -2380,10 +2380,10 @@ const MentorDashboard: React.FC = () => {
                 <CircularProgress size={16} color="inherit" /> Kaydediliyor...
               </Box> : 'Kaydet'}
           </ActionButton>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
+                </DialogActions>
+            </Dialog>
+        </Box>
+    );
 };
 
-export default MentorDashboard;
+export default MentorDashboard; 

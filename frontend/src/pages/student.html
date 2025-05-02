@@ -1,3 +1,5 @@
+<!-- 
+ 
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
@@ -24,27 +26,11 @@ import {
   TextField,
   Chip,
   alpha,
-  useTheme,
-  Container
+  useTheme
 } from '@mui/material';
 import { styled, keyframes } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { 
-  UploadFile, 
-  Download, 
-  Person, 
-  School, 
-  Badge, 
-  CalendarMonth, 
-  Assignment as AssignmentIcon, 
-  Assessment, 
-  Grading, 
-  EmojiEvents, 
-  BarChart, 
-  Timeline, 
-  TrendingUp, 
-  Bookmarks
-} from '@mui/icons-material';
+import { UploadFile, Download, Person, School, Badge, CalendarMonth, Assignment as AssignmentIcon } from '@mui/icons-material';
 import api from '../services/api';
 import { Theme } from '@mui/material/styles';
 
@@ -131,91 +117,11 @@ const rotateGlow = keyframes`
   }
 `;
 
-// Yeni animasyonlar
-const gradientShift = keyframes`
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-`;
-
-const flowingLine = keyframes`
-  0% {
-    background-position: 0% 0%;
-  }
-  100% {
-    background-position: 100% 0%;
-  }
-`;
-
-const colorPulse = keyframes`
-  0% {
-    filter: hue-rotate(0deg) brightness(1);
-  }
-  50% {
-    filter: hue-rotate(45deg) brightness(1.2);
-  }
-  100% {
-    filter: hue-rotate(0deg) brightness(1);
-  }
-`;
-
-const floatingBubbles = keyframes`
-  0% {
-    transform: translateY(100%) translateX(0%) scale(0);
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    transform: translateY(-100vh) translateX(calc(20vw * var(--offset, 0))) scale(1);
-    opacity: 0;
-  }
-`;
-
-const rainbowText = keyframes`
-  0% {
-    filter: hue-rotate(0deg);
-  }
-  100% {
-    filter: hue-rotate(360deg);
-  }
-`;
-
-const shine = keyframes`
-  0% {
-    background-position: -100% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-`;
-
-const glowingBorder = keyframes`
-  0% {
-    box-shadow: 0 0 5px rgba(79, 195, 247, 0.5), 0 0 10px rgba(79, 195, 247, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 10px rgba(79, 195, 247, 0.8), 0 0 20px rgba(79, 195, 247, 0.5);
-  }
-  100% {
-    box-shadow: 0 0 5px rgba(79, 195, 247, 0.5), 0 0 10px rgba(79, 195, 247, 0.3);
-  }
-`;
-
 // Stillendirilmiş bileşenler
 const PageContainer = styled(Box)(({ theme }) => ({
     padding: theme.spacing(3),
     minHeight: '100vh',
-    background: `linear-gradient(-45deg, #FF9966, #FF5E62, #4ECDC4, #1A535C, #6A0572)`,
-    backgroundSize: '400% 400%',
-    animation: `${gradientShift} 15s ease infinite`,
+    backgroundImage: `linear-gradient(120deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.secondary.light, 0.1)} 100%)`,
     backgroundAttachment: 'fixed',
     position: 'relative',
     overflow: 'hidden',
@@ -255,7 +161,7 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
     backdropFilter: 'blur(10px)',
     border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-    background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.85)} 0%, ${alpha(theme.palette.background.paper, 0.75)} 100%)`,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.9)} 100%)`,
     animation: `${fadeIn} 0.6s ease-out`,
     transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
     position: 'relative',
@@ -272,8 +178,6 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
         width: '100%',
         height: '5px',
         background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-        backgroundSize: '300% 100%',
-        animation: `${flowingLine} 3s ease infinite`,
         opacity: 0.8,
         zIndex: 1,
     }
@@ -538,118 +442,6 @@ const GradientText = styled(Typography)(({ theme }) => ({
     textShadow: '0 2px 10px rgba(0,0,0,0.1)',
     letterSpacing: '0.5px'
 }));
-
-// İstatistik kartları için stil
-const StatCard = styled(Card)(({ theme }) => ({
-    height: '100%',
-    borderRadius: '16px',
-    overflow: 'hidden',
-    backdropFilter: 'blur(10px)',
-    background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.9)} 0%, ${alpha(theme.palette.background.paper, 0.7)} 100%)`,
-    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
-    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
-    animation: `${fadeIn} 0.8s ease-out`,
-    '&:hover': {
-        transform: 'translateY(-8px) scale(1.02)',
-        boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.2)}`,
-        '& .stat-icon': {
-            transform: 'scale(1.2) rotate(10deg)',
-            color: theme.palette.primary.main
-        }
-    },
-    position: 'relative',
-    '&::after': {
-        content: '""',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        height: '5px',
-        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-        backgroundSize: '300% 100%',
-        animation: `${flowingLine} 3s ease infinite`,
-        zIndex: 1,
-    }
-}));
-
-const StatValue = styled(Typography)(({ theme }) => ({
-    fontSize: '2.2rem',
-    fontWeight: 'bold',
-    marginBottom: theme.spacing(1),
-    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    display: 'inline-block',
-    position: 'relative',
-    animation: `${colorPulse} 5s infinite`,
-    '&::after': {
-        content: '""',
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        width: '100%',
-        height: '2px',
-        background: `linear-gradient(90deg, ${theme.palette.primary.main}, transparent)`,
-        opacity: 0.6
-    }
-}));
-
-const StatIcon = styled(Box)(({ theme }) => ({
-    position: 'absolute',
-    top: '15px',
-    right: '15px',
-    fontSize: '3rem',
-    opacity: 0.15,
-    color: theme.palette.primary.main,
-    transition: 'all 0.3s ease',
-    transform: 'rotate(-5deg)',
-}));
-
-const StatLabel = styled(Typography)(({ theme }) => ({
-    fontWeight: 'bold',
-    color: theme.palette.text.secondary,
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1),
-    '& .MuiSvgIcon-root': {
-        fontSize: '1.2rem',
-        color: theme.palette.primary.main,
-    }
-}));
-
-// Kabarcıklar için
-const BubbleContainer = styled(Box)(({ theme }) => ({
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-    pointerEvents: 'none',
-    zIndex: 0,
-}));
-
-interface BubbleProps {
-    size?: number;
-    offset?: number;
-}
-
-const Bubble = styled(Box)<BubbleProps>(({ theme, size = 30, offset = 0 }) => ({
-    position: 'absolute',
-    bottom: '-20px',
-    left: `${Math.random() * 100}%`,
-    width: `${size}px`,
-    height: `${size}px`,
-    borderRadius: '50%',
-    background: `radial-gradient(circle at 30% 30%, ${alpha(theme.palette.common.white, 0.9)}, ${alpha(theme.palette.primary.light, 0.4)})`,
-    boxShadow: `0 0 10px ${alpha(theme.palette.primary.light, 0.5)}`,
-    animation: `${floatingBubbles} ${6 + Math.random() * 6}s ease-in infinite`,
-    animationDelay: `${Math.random() * 5}s`,
-    '--offset': offset,
-    zIndex: 0,
-    backdropFilter: 'blur(5px)',
-} as any));
 
 // Döngüsel referansları manuel olarak işlemek için yardımcı fonksiyon
 const extractStudentData = (data: string) => {
@@ -1265,9 +1057,7 @@ const StudentDashboard: React.FC = () => {
                 alignItems="center" 
                 minHeight="100vh"
                 sx={{
-                    background: `linear-gradient(-45deg, #FF9966, #FF5E62, #4ECDC4, #1A535C, #6A0572)`,
-                    backgroundSize: '400% 400%',
-                    animation: `${gradientShift} 15s ease infinite`,
+                    background: `linear-gradient(120deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.secondary.light, 0.1)} 100%)`,
                     position: 'relative',
                     overflow: 'hidden',
                     '&::before': {
@@ -1393,25 +1183,8 @@ const StudentDashboard: React.FC = () => {
         );
     }
 
-    // Öğrenci istatistiklerini hesapla
-    const completedAssignments = assignments?.filter((a: any) => a.grade !== null)?.length || 0;
-    const pendingAssignments = (assignments?.length || 0) - completedAssignments;
-    const averageGrade = assignments?.reduce((acc: number, curr: any) => 
-        curr.grade ? acc + curr.grade : acc, 0) / (completedAssignments || 1);
-
     return (
         <PageContainer>
-            {/* Arka plan kabarcıkları */}
-            <BubbleContainer>
-                {[...Array(15)].map((_, i) => (
-                    <Bubble 
-                        key={i} 
-                        size={10 + Math.random() * 50} 
-                        offset={Math.random() * 2 - 1}
-                    />
-                ))}
-            </BubbleContainer>
-
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Typography 
                     variant="h4" 
@@ -1466,75 +1239,9 @@ const StudentDashboard: React.FC = () => {
                 </Box>
             </Box>
             
-            {/* İstatistik Kartları */}
-            <Grid container spacing={5} mb={4} sx={{ px: 2, justifyContent: 'space-between' }}>
-                <Grid sx={{ width: { xs: '100%', sm: '48%', md: '23%' } }}>
-                    <StatCard>
-                        <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
-                            <StatIcon className="stat-icon">
-                                <AssignmentIcon fontSize="inherit" />
-                            </StatIcon>
-                            <StatValue>
-                                {assignments?.length || 0}
-                            </StatValue>
-                            <StatLabel>
-                                <Bookmarks fontSize="small" /> Toplam Ödev
-                            </StatLabel>
-                        </CardContent>
-                    </StatCard>
-                </Grid>
-                <Grid sx={{ width: { xs: '100%', sm: '48%', md: '23%' } }}>
-                    <StatCard>
-                        <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
-                            <StatIcon className="stat-icon">
-                                <Grading fontSize="inherit" />
-                            </StatIcon>
-                            <StatValue>
-                                {completedAssignments}
-                            </StatValue>
-                            <StatLabel>
-                                <TrendingUp fontSize="small" /> Tamamlanan
-                            </StatLabel>
-                        </CardContent>
-                    </StatCard>
-                </Grid>
-                <Grid sx={{ width: { xs: '100%', sm: '48%', md: '23%' } }}>
-                    <StatCard>
-                        <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
-                            <StatIcon className="stat-icon">
-                                <Timeline fontSize="inherit" />
-                            </StatIcon>
-                            <StatValue>
-                                {pendingAssignments}
-                            </StatValue>
-                            <StatLabel>
-                                <Assessment fontSize="small" /> Bekleyen
-                            </StatLabel>
-                        </CardContent>
-                    </StatCard>
-                </Grid>
-                <Grid sx={{ width: { xs: '100%', sm: '48%', md: '23%' } }}>
-                    <StatCard>
-                        <CardContent sx={{ position: 'relative', zIndex: 1, p: 3 }}>
-                            <StatIcon className="stat-icon">
-                                <BarChart fontSize="inherit" />
-                            </StatIcon>
-                            <StatValue>
-                                {isNaN(averageGrade) ? '-' : averageGrade.toFixed(1)}
-                            </StatValue>
-                            <StatLabel>
-                                <EmojiEvents fontSize="small" /> Ortalama Not
-                            </StatLabel>
-                        </CardContent>
-                    </StatCard>
-                </Grid>
-            </Grid>
-            
-            {/* Ana içerik - Ödevler ve Profil */}
             <Grid container spacing={3}>
-                {/* Sol sütun - Profil kartı */}
-                <Grid sx={{ gridColumn: { xs: 'span 12', md: 'span 4' }, order: { xs: 1, md: 1 } }}>
-                    <ProfileCard elevation={3} sx={{ height: '100%' }}>
+                <Grid sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
+                    <ProfileCard elevation={3}>
                         <ProfileContent textAlign="center">
                             <ProfileAvatar>
                                 {studentData?.user?.firstName?.charAt(0) || '?'}
@@ -1609,9 +1316,8 @@ const StudentDashboard: React.FC = () => {
                     </ProfileCard>
                 </Grid>
                 
-                {/* Sağ sütun - Ödevler listesi */}
-                <Grid sx={{ gridColumn: { xs: 'span 12', md: 'span 8' }, order: { xs: 2, md: 2 } }}>
-                    <StyledPaper elevation={3} sx={{ maxHeight: { md: '90vh' }, height: '100%' }}>
+                <Grid sx={{ gridColumn: { xs: 'span 12', md: 'span 8' } }}>
+                    <StyledPaper elevation={3}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                             <Box display="flex" alignItems="center">
                                 <AssignmentIcon 
@@ -1645,120 +1351,89 @@ const StudentDashboard: React.FC = () => {
                         <Divider sx={{ mb: 3 }} />
                         
                         {(assignments && assignments.length > 0) ? (
-                            <Box 
-                                sx={{ 
-                                    maxHeight: { xs: 'auto', md: '70vh' }, 
-                                    overflowY: 'auto',
-                                    pr: 1,
-                                    '&::-webkit-scrollbar': {
-                                        width: '6px',
-                                    },
-                                    '&::-webkit-scrollbar-track': {
-                                        background: 'rgba(0,0,0,0.05)',
-                                        borderRadius: '10px'
-                                    },
-                                    '&::-webkit-scrollbar-thumb': {
-                                        background: theme => alpha(theme.palette.primary.main, 0.3),
-                                        borderRadius: '10px',
-                                        '&:hover': {
-                                            background: theme => alpha(theme.palette.primary.main, 0.5),
-                                        }
-                                    }
-                                }}
-                            >
-                                <Grid container spacing={2} sx={{ width: '100%', m: 0 }}>
-                                    {assignments.map((assignment: any, index: number) => (
-                                        <Grid 
-                                            key={assignment.id || `assignment-${index}`}
-                                            sx={{ 
-                                                width: { xs: '100%', md: '50%' },
-                                                padding: 1
-                                            }}
-                                        >
-                                            <AssignmentCard sx={{ 
-                                                maxWidth: '100%',
-                                                transform: 'scale(0.95)',
-                                                '&:hover': {
-                                                    transform: 'translateY(-8px) scale(0.97)',
-                                                }
-                                            }}>
-                                                <CardGradient className="card-gradient" />
-                                                <AssignmentShine className="assignment-shine" />
-                                                <CardContent sx={{ position: 'relative', zIndex: 1 }}>
-                                                    <CardTitle variant="h6">
-                                                        {assignment.title || 'İsimsiz Ödev'}
-                                                    </CardTitle>
-                                                    <Box display="flex" alignItems="center" mb={1}>
-                                                        <CalendarMonth fontSize="small" sx={{ mr: 1, color: theme.palette.primary.main }} />
-                                                        <Typography variant="body2" color="text.secondary">
-                                                            {assignment.submissionDate ? 
-                                                                new Date(assignment.submissionDate).toLocaleDateString('tr-TR') : 
-                                                                'Tarih belirtilmemiş'}
+                            <Grid container spacing={2}>
+                                {assignments.map((assignment: any) => (
+                                    <Grid 
+                                        key={assignment.id || 'unknown-id'}
+                                        sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}
+                                    >
+                                        <AssignmentCard>
+                                            <CardGradient className="card-gradient" />
+                                            <AssignmentShine className="assignment-shine" />
+                                            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                                                <CardTitle variant="h6">
+                                                    {assignment.title || 'İsimsiz Ödev'}
+                                                </CardTitle>
+                                                <Box display="flex" alignItems="center" mb={1}>
+                                                    <CalendarMonth fontSize="small" sx={{ mr: 1, color: theme.palette.primary.main }} />
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {assignment.submissionDate ? 
+                                                            new Date(assignment.submissionDate).toLocaleDateString('tr-TR') : 
+                                                            'Tarih belirtilmemiş'}
+                                                    </Typography>
+                                                </Box>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    {assignment.description || 'Açıklama bulunmuyor.'}
+                                                </Typography>
+                                                
+                                                {assignment.feedback && (
+                                                    <Box 
+                                                        mt={2} 
+                                                        p={1.5} 
+                                                        bgcolor={alpha(theme.palette.primary.light, 0.1)}
+                                                        borderRadius={1}
+                                                        border={`1px solid ${alpha(theme.palette.primary.main, 0.1)}`}
+                                                    >
+                                                        <Typography variant="subtitle2" color="primary" fontWeight="bold">
+                                                            Geri Bildirim:
+                                                        </Typography>
+                                                        <Typography variant="body2">
+                                                            {assignment.feedback}
                                                         </Typography>
                                                     </Box>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {assignment.description || 'Açıklama bulunmuyor.'}
-                                                    </Typography>
-                                                    
-                                                    {assignment.feedback && (
-                                                        <Box 
-                                                            mt={2} 
-                                                            p={1.5} 
-                                                            bgcolor={alpha(theme.palette.primary.light, 0.1)}
-                                                            borderRadius={1}
-                                                            border={`1px solid ${alpha(theme.palette.primary.main, 0.1)}`}
-                                                        >
-                                                            <Typography variant="subtitle2" color="primary" fontWeight="bold">
-                                                                Geri Bildirim:
-                                                            </Typography>
-                                                            <Typography variant="body2">
-                                                                {assignment.feedback}
-                                                            </Typography>
-                                                        </Box>
-                                                    )}
-                                                    
-                                                    {assignment.grade && (
-                                                        <Box mt={1}>
-                                                            <Chip 
-                                                                label={`Not: ${assignment.grade}`} 
-                                                                color={assignment.grade >= 70 ? "success" : 
-                                                                      assignment.grade >= 50 ? "warning" : "error"}
-                                                                size="small"
-                                                                sx={{ 
-                                                                    fontWeight: 'bold',
-                                                                    boxShadow: `0 2px 8px ${alpha(
-                                                                        assignment.grade >= 70 ? theme.palette.success.main : 
-                                                                        assignment.grade >= 50 ? theme.palette.warning.main : 
-                                                                        theme.palette.error.main, 0.3
-                                                                    )}`
-                                                                }}
-                                                            />
-                                                        </Box>
-                                                    )}
-                                                </CardContent>
-                                                <CardActions sx={{ p: 2, pt: 0 }}>
-                                                    <Button 
-                                                        startIcon={<Download />}
-                                                        size="small"
-                                                        onClick={() => handleDownload(assignment.id)}
-                                                        sx={{ 
-                                                            borderRadius: '20px',
-                                                            background: alpha(theme.palette.primary.main, 0.08),
-                                                            transition: 'all 0.2s ease',
-                                                            '&:hover': {
-                                                                background: alpha(theme.palette.primary.main, 0.15),
-                                                                transform: 'translateY(-2px)'
-                                                            }
-                                                        }}
-                                                    >
-                                                        İndir
-                                                    </Button>
-                                                </CardActions>
-                                            </AssignmentCard>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            </Box>
+                                                )}
+                                                
+                                                {assignment.grade && (
+                                                    <Box mt={1}>
+                                                        <Chip 
+                                                            label={`Not: ${assignment.grade}`} 
+                                                            color={assignment.grade >= 70 ? "success" : 
+                                                                  assignment.grade >= 50 ? "warning" : "error"}
+                                                            size="small"
+                                                            sx={{ 
+                                                                fontWeight: 'bold',
+                                                                boxShadow: `0 2px 8px ${alpha(
+                                                                    assignment.grade >= 70 ? theme.palette.success.main : 
+                                                                    assignment.grade >= 50 ? theme.palette.warning.main : 
+                                                                    theme.palette.error.main, 0.3
+                                                                )}`
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                )}
+                                            </CardContent>
+                                            <CardActions sx={{ p: 2, pt: 0 }}>
+                                                <Button 
+                                                    startIcon={<Download />}
+                                                    size="small"
+                                                    onClick={() => handleDownload(assignment.id)}
+                                                    sx={{ 
+                                                        borderRadius: '20px',
+                                                        background: alpha(theme.palette.primary.main, 0.08),
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                            background: alpha(theme.palette.primary.main, 0.15),
+                                                            transform: 'translateY(-2px)'
+                                                        }
+                                                    }}
+                                                >
+                                                    İndir
+                                                </Button>
+                                            </CardActions>
+                                        </AssignmentCard>
+                                    </Grid>
+                                ))}
+                            </Grid>
                         ) : (
                             <Box textAlign="center" py={4}>
                                 <Typography variant="body1" color="text.secondary">
@@ -1941,3 +1616,5 @@ const StudentDashboard: React.FC = () => {
 };
 
 export default StudentDashboard; 
+
+-->
