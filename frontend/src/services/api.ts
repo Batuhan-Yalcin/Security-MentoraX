@@ -1,14 +1,35 @@
 import axios from 'axios';
 
-// API URL'nin sonunda / varsa kaldır
-let baseURL = 'http://localhost:8080/api/';
-if (baseURL.endsWith('/')) {
-  baseURL = baseURL.slice(0, -1);
-}
-console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'API URL: ' + baseURL);
+// Sabit URL yapılandırması - değişiklikler sadece burada yapılacak
+// Dönen 403 hatası bize URL'in doğru olduğunu gösteriyor, sadece yetkilendirme hatası
+const API_CONFIG = {
+  BASE_URL: 'http://localhost:8080',
+  PREFIX: '/api'
+};
 
+// Tam URL oluşturma fonksiyonu
+const createApiUrl = (endpoint: string): string => {
+  // Başlangıç ve bitiş eğik çizgilerini temizle 
+  const cleanEndpoint = endpoint.replace(/^\/+|\/+$/g, '');
+  const cleanPrefix = API_CONFIG.PREFIX.replace(/^\/+|\/+$/g, '');
+  
+  // Endpoint zaten prefix ile başlıyorsa, prefix'i kaldır
+  let finalEndpoint = cleanEndpoint;
+  if (finalEndpoint.startsWith(`${cleanPrefix}/`)) {
+    finalEndpoint = finalEndpoint.substring(cleanPrefix.length + 1);
+  } else if (finalEndpoint === cleanPrefix) {
+    finalEndpoint = '';
+  }
+  
+  // Tam URL'i oluştur
+  return `${API_CONFIG.BASE_URL}/${cleanPrefix}${finalEndpoint ? '/' + finalEndpoint : ''}`;
+};
+
+console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'API yapılandırması:', API_CONFIG);
+
+// Axios instance
 const api = axios.create({
-  baseURL,
+  baseURL: API_CONFIG.BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,7 +37,41 @@ const api = axios.create({
 
 // Sistemin hangi ortamda çalıştığını kontrol et
 console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'Ortam:', process.env.NODE_ENV);
-console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'Backend URL:', baseURL);
+
+// İstek interceptor'ı
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      console.log('Token ekleniyor:', token.substring(0, 10) + '...');
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // URL düzeltmesi - config.url değerinden tam URL oluştur
+    if (config.url) {
+      // URL prefix ile başlıyorsa, orijinal baseURL kullan
+      if (config.url.startsWith(API_CONFIG.PREFIX)) {
+        // Prefix ile başlayan endpoint için doğrudan baseURL kullan
+        config.url = config.url;
+      } else {
+        // Normal endpoint için prefix ekle
+        config.url = `${API_CONFIG.PREFIX}/${config.url.replace(/^\/+/, '')}`;
+      }
+      
+      // Çift slashları temizle
+      config.url = config.url.replace(/\/+/g, '/');
+      if (config.url.startsWith('/')) {
+        config.url = config.url.substring(1);
+      }
+    }
+    
+    // URL'i log olarak göster
+    console.log('[API REQUEST]', config.method?.toUpperCase(), `${config.baseURL}/${config.url}`);
+    
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Özel event oluştur (auth error için)
 export const AUTH_ERROR_EVENT = 'auth_error';
@@ -34,27 +89,7 @@ export const triggerAuthError = () => {
   }));
 };
 
-// İstek interceptor'ı
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      console.log('Token ekleniyor:', token.substring(0, 10) + '...');
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    // URL'de çift slash kontrolü yapalım ve düzeltelim
-    if (config.url?.startsWith('/') && config.baseURL?.endsWith('/')) {
-      config.url = config.url.substring(1);
-    }
-    
-    console.log('[API REQUEST]', config.method?.toUpperCase(), config.baseURL + '/' + config.url);
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Yanıt interceptor'ı
+// Yanıt interceptor'ı - hata kontrolü ve temizleme için
 api.interceptors.response.use(
   (response) => {
     console.log('[API RESPONSE]', {
@@ -119,6 +154,7 @@ api.interceptors.response.use(
                 firstName: "Ali",
                 lastName: "Yılmaz",
                 email: "ali.yilmaz@example.com",
+                role: "STUDENT",
                 student: {
                   id: 1,
                   studentNumber: "ST10001"
@@ -130,20 +166,10 @@ api.interceptors.response.use(
                 firstName: "Ayşe", 
                 lastName: "Kaya",
                 email: "ayse.kaya@example.com",
+                role: "STUDENT",
                 student: {
                   id: 2,
                   studentNumber: "ST10002"
-                }
-              },
-              {
-                id: 3,
-                username: "student3",
-                firstName: "Mehmet",
-                lastName: "Demir",
-                email: "mehmet.demir@example.com",
-                student: {
-                  id: 3,
-                  studentNumber: "ST10003"
                 }
               }
             ];
@@ -173,16 +199,46 @@ api.interceptors.response.use(
                 grade: null,
                 fileName: "veritabani_tasarimi.docx",
                 student: { id: studentId }
+              }
+            ];
+          } else if (url.includes('admin/users')) {
+            // Admin kullanıcıları için örnek veriler
+            console.log('[API FALLBACK] Admin panel için örnek kullanıcı verileri kullanılıyor');
+            response.data = [
+              {
+                id: 1,
+                username: "admin",
+                firstName: "Admin",
+                lastName: "User",
+                email: "admin@example.com",
+                role: "ADMIN"
+              },
+              {
+                id: 2,
+                username: "mentor1",
+                firstName: "Mentor",
+                lastName: "One",
+                email: "mentor1@example.com",
+                role: "MENTOR",
+                mentor: {
+                  id: 1,
+                  expertise: "Java, Spring Boot",
+                  bio: "Deneyimli yazılım mühendisi ve eğitmen"
+                }
               },
               {
                 id: 3,
-                title: "Spring Boot Uygulaması",
-                description: "RESTful API geliştirme görevi",
-                submissionDate: "2023-08-10T14:20:00",
-                feedback: "Harika bir çalışma, tüm isterleri karşılamışsın.",
-                grade: 95,
-                fileName: "spring_boot_app.zip",
-                student: { id: studentId }
+                username: "student1",
+                firstName: "Öğrenci",
+                lastName: "Bir",
+                email: "student1@example.com",
+                role: "STUDENT",
+                student: {
+                  id: 1,
+                  department: "Bilgisayar Mühendisliği",
+                  studentNumber: "20240001",
+                  mentorId: 1
+                }
               }
             ];
           } else {
@@ -200,10 +256,14 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Detaylı hata loglaması
     console.error('[API ERROR]', error.response ? {
       status: error.response.status,
       statusText: error.response.statusText,
       data: error.response.data,
+      url: error.config?.url,
+      method: error.config?.method,
+      headers: error.config?.headers
     } : error.message);
     
     if (error.response) {
@@ -211,15 +271,28 @@ api.interceptors.response.use(
 
       // 401 veya 403 hatası - token geçersiz veya yetkisiz
       if (error.response.status === 401 || error.response.status === 403) {
-        console.log('Oturum sonlandırıldı. Custom event ile bildirim yapılıyor.');
-        triggerAuthError(); // window.location.href yerine custom event kullan
+        console.log('Oturum sonlandırıldı veya yetkilendirme hatası. Custom event ile bildirim yapılıyor.', error.response.status);
+        
+        // 403 hatası olduğunda ve halihazırda token varsa, token'ı yenilememiz gerekebilir
+        const token = localStorage.getItem('token');
+        if (error.response.status === 403 && token) {
+          console.warn('Mevcut token ile yetki hatası (403): Token yenilenebilir veya rolünüz bu işlem için yeterli olmayabilir');
+          console.log('Mevcut token (ilk 20 karakter):', token.substring(0, 20));
+        }
+        
+        // Yetkilendirme hatası bildirimini sadece admin veya güvenli sayfalardan geliyorsa yap
+        // Eğer login sayfasından geliyorsa, otomatik yönlendirme yapma
+        if (!error.config?.url?.includes('login') && !error.config?.url?.includes('register')) {
+          triggerAuthError();
+        }
       }
     } else if (error.request) {
       console.error('İstek Hatası (Sunucudan yanıt alınamadı):', error.request);
       console.error('İstek detayları:', {
-        url: error.config.baseURL + error.config.url,
-        method: error.config.method,
-        headers: error.config.headers
+        url: error.config?.baseURL + (error.config?.url || ''),
+        method: error.config?.method,
+        headers: error.config?.headers,
+        data: error.config?.data
       });
       
       alert('Sunucuya bağlanılamıyor. Lütfen sunucunun çalıştığından emin olun.');
@@ -230,5 +303,10 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Yardımcı fonksiyonlar
+export const apiUtils = {
+  createUrl: createApiUrl
+};
 
 export default api; 
