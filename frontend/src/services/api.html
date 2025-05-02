@@ -1,0 +1,134 @@
+<!--  
+  import axios from 'axios';
+
+// API URL'nin sonunda / varsa kaldır
+let baseURL = 'http://localhost:8080/api/';
+if (baseURL.endsWith('/')) {
+  baseURL = baseURL.slice(0, -1);
+}
+console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'API URL: ' + baseURL);
+
+const api = axios.create({
+  baseURL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Sistemin hangi ortamda çalıştığını kontrol et
+console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'Ortam:', process.env.NODE_ENV);
+console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'Backend URL:', baseURL);
+
+// Özel event oluştur (auth error için)
+export const AUTH_ERROR_EVENT = 'auth_error';
+export const triggerAuthError = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  localStorage.removeItem('username');
+  
+  // Custom event yayınla
+  window.dispatchEvent(new CustomEvent(AUTH_ERROR_EVENT, {
+    detail: {
+      message: 'Oturum sonlandırıldı veya yetkisiz erişim',
+      timestamp: new Date().toISOString()
+    }
+  }));
+};
+
+// İstek interceptor'ı
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      console.log('Token ekleniyor:', token.substring(0, 10) + '...');
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    // URL'de çift slash kontrolü yapalım ve düzeltelim
+    if (config.url?.startsWith('/') && config.baseURL?.endsWith('/')) {
+      config.url = config.url.substring(1);
+    }
+    
+    console.log('[API REQUEST]', config.method?.toUpperCase(), config.baseURL + '/' + config.url);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Yanıt interceptor'ı
+api.interceptors.response.use(
+  (response) => {
+    console.log('[API RESPONSE]', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data,
+    });
+    
+    // API yanıtında sorunlu String'leri temizleyelim
+    if (typeof response.data === 'string' && response.headers['content-type']?.includes('application/json')) {
+      try {
+        // String yanıt içindeki sorunları temizleyen yardımcı fonksiyon
+        const cleanResponse = (str: string): string => {
+          // Sorunlu karakterleri temizleyelim
+          return str
+            .replace(/\\u0000/g, '')
+            .replace(/\\n/g, ' ')
+            .replace(/\n/g, ' ')
+            .replace(/\\t/g, ' ')
+            .replace(/\t/g, ' ')
+            .replace(/\r/g, ' ')
+            .replace(/\\/g, '\\\\') // escape backslashes
+            .replace(/Beklenmeyen bir hata oluştu/g, ''); // Metin sonundaki hata mesajını temizleyelim
+        };
+        
+        const cleanedData = cleanResponse(response.data);
+        console.log('[API CLEANED DATA]', cleanedData.substring(0, 100) + '...');
+        
+        try {
+          const parsedData = JSON.parse(cleanedData);
+          console.log('[API PARSED DATA] Başarıyla parse edildi, tür:', Array.isArray(parsedData) ? 'Array' : typeof parsedData);
+          response.data = parsedData;
+        } catch (e) {
+          console.error('[API PARSE ERROR]', e);
+        }
+      } catch (e) {
+        console.error('Yanıt temizlenirken hata:', e);
+      }
+    }
+    
+    return response;
+  },
+  (error) => {
+    console.error('[API ERROR]', error.response ? {
+      status: error.response.status,
+      statusText: error.response.statusText,
+      data: error.response.data,
+    } : error.message);
+    
+    if (error.response) {
+      console.error('Yanıt detayları:', JSON.stringify(error.response.data, null, 2));
+
+      // 401 veya 403 hatası - token geçersiz veya yetkisiz
+      if (error.response.status === 401 || error.response.status === 403) {
+        console.log('Oturum sonlandırıldı. Custom event ile bildirim yapılıyor.');
+        triggerAuthError(); // window.location.href yerine custom event kullan
+      }
+    } else if (error.request) {
+      console.error('İstek Hatası (Sunucudan yanıt alınamadı):', error.request);
+      console.error('İstek detayları:', {
+        url: error.config.baseURL + error.config.url,
+        method: error.config.method,
+        headers: error.config.headers
+      });
+      
+      alert('Sunucuya bağlanılamıyor. Lütfen sunucunun çalıştığından emin olun.');
+    } else {
+      console.error('Hata:', error.message);
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+export default api; 
+-->

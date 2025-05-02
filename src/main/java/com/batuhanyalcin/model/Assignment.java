@@ -2,6 +2,9 @@ package com.batuhanyalcin.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -21,6 +24,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Assignment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,10 +44,12 @@ public class Assignment {
 
     @ManyToOne
     @JoinColumn(name = "student_id", nullable = false)
+    @JsonBackReference(value = "student-assignments")
     private Student student;
 
     @ManyToOne
     @JoinColumn(name = "mentor_id")
+    @JsonBackReference(value = "mentor-assignments")
     private Mentor mentor;
 
     @Column(nullable = false)

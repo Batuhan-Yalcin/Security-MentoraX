@@ -67,4 +67,13 @@ public class MentorAssignmentController {
             @RequestParam Integer grade) {
         return ResponseEntity.ok(mentorAssignmentService.addFeedback(id, feedback, grade));
     }
+
+    @GetMapping("/assignments/{id}/download")
+    @Operation(summary = "Ödev indir", description = "Belirtilen ödevi indirir")
+    @ApiResponse(responseCode = "200", description = "Ödev başarıyla indirildi")
+    @ApiResponse(responseCode = "401", description = "Yetkisiz erişim")
+    @ApiResponse(responseCode = "404", description = "Ödev bulunamadı")
+    public ResponseEntity<byte[]> downloadAssignment(@PathVariable Long id) {
+        return mentorAssignmentService.downloadAssignment(id);
+    }
 }
