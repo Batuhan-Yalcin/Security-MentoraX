@@ -150,95 +150,155 @@ const MentorDashboard: React.FC = () => {
                 console.log('Token durumu:', localStorage.getItem('token') ? 'Var' : 'Yok');
                 console.log('Role durumu:', localStorage.getItem('role'));
                 
-                // api servisi zaten baseURL'yi http://localhost:8080/api/ olarak tanımladı,
-                // bu nedenle başında / olmadan endpoint'i çağırıyoruz
+                // MentorAssignmentController'daki endpointi kullan
                 const response = await api.get('mentor/students');
                 console.log('Öğrenciler alındı, ham veri:', response.data);
                 
-                // Öğrenci verilerini düzleştirmek için bir işlev
-                const processStudentData = (data: any): Student[] => {
-                    // Array ise her öğeyi düzleştir
-                    if (Array.isArray(data)) {
-                        return data.map(item => {
-                            // Her öğrenciyi basit formata dönüştür
-                            let student: Student = {
-                                id: typeof item === 'object' ? item.id || 0 : 0,
-                                username: typeof item === 'object' ? item.username || '' : '',
-                                firstName: typeof item === 'object' ? item.firstName || '' : '',
-                                lastName: typeof item === 'object' ? item.lastName || '' : '',
-                                email: typeof item === 'object' ? item.email || '' : '',
-                                studentNumber: ''
-                            };
-                            
-                            // Öğrenci numarasını ekle (farklı veri yapılarını destekle)
-                            if (typeof item === 'object') {
-                                if (item.studentNumber) {
-                                    student.studentNumber = item.studentNumber;
-                                } else if (item.student && item.student.studentNumber) {
-                                    student.studentNumber = item.student.studentNumber;
-                                } else {
-                                    student.studentNumber = `S${student.id}`;
-                                }
-                            }
-                            
-                            return student;
-                        });
-                    }
-                    
-                    // Obje ise ve içinde dizi varsa onu işle
-                    if (typeof data === 'object' && data !== null) {
-                        for (const key in data) {
-                            if (Array.isArray(data[key])) {
-                                return processStudentData(data[key]);
-                            }
+                // Backend'den gelen veri dizi formatında ise doğrudan kullan
+                if (Array.isArray(response.data)) {
+                    return response.data.map((user: any) => ({
+                        id: user.id,
+                        username: user.username || '',
+                        firstName: user.firstName || '',
+                        lastName: user.lastName || '',
+                        email: user.email || '',
+                        studentNumber: user.student?.studentNumber || `S${user.id}`
+                    }));
+                }
+                
+                // String olarak gelen veriyi işle
+                if (typeof response.data === 'string') {
+                    try {
+                        console.log('Ham veri string formatında, JSON parse denenecek...');
+                        // JSON olarak parse etmeyi dene
+                        const parsedData = JSON.parse(response.data);
+                        if (Array.isArray(parsedData)) {
+                            return parsedData.map((user: any) => ({
+                                id: user.id,
+                                username: user.username || '',
+                                firstName: user.firstName || '',
+                                lastName: user.lastName || '',
+                                email: user.email || '',
+                                studentNumber: user.student?.studentNumber || `S${user.id}`
+                            }));
+                        }
+                    } catch (parseError) {
+                        console.error('JSON parse hatası, regex ile çözmeye çalışılacak:', parseError);
+                        
+                        // Regex ile ID'leri bul
+                        const idRegex = /"id":(\d+).*?"username":"([^"]+)"/g;
+                        const users: Student[] = [];
+                        let match;
+                        
+                        // REGEX'LE TÜM KULLANICILAR İÇİN GELİŞTİRİLMİŞ YAKLAŞIM
+                        // Önce string içindeki tüm farklı ID'leri toplayalım
+                        const allIds = new Set<number>();
+                        const idOnlyRegex = /"id":(\d+)/g;
+                        let idMatch;
+                        
+                        while ((idMatch = idOnlyRegex.exec(response.data)) !== null) {
+                            const id = parseInt(idMatch[1]);
+                            if (id > 0) allIds.add(id);
                         }
                         
-                        // Tek bir öğrenci objesi olabilir
-                        if (data.id || data.username) {
-                            return [processStudentData([data])[0]];
-                        }
-                    }
-                    
-                    // String ise JSON parse etmeyi dene
-                    if (typeof data === 'string') {
-                        try {
-                            // Tırnak işaretlerinde sorun olabilir, çözelim
-                            const cleanedData = data.replace(/\\"/g, '"').replace(/"{/g, '{').replace(/}"/g, '}');
-                            return processStudentData(JSON.parse(cleanedData));
-                        } catch (error) {
-                            console.error('JSON parse hatası, regex ile çözmeye çalışıyoruz:', error);
+                        console.log('Bulunan benzersiz ID sayısı:', allIds.size);
+                        
+                        // Her ID için en az bir kez ROLE:STUDENT kontrolü yap
+                        const studentIds = new Set<number>();
+                        
+                        allIds.forEach(id => {
+                            // Bu ID bir öğrenci mi? Kontrol et
+                            const isStudentRegex = new RegExp(`"id":${id}[^}]*?"role":"STUDENT"`, 'g');
+                            if (isStudentRegex.test(response.data)) {
+                                studentIds.add(id);
+                            }
+                        });
+                        
+                        console.log('Bulunan öğrenci ID sayısı:', studentIds.size);
+                        
+                        // Her öğrenci ID'si için bilgileri bul
+                        studentIds.forEach(id => {
+                            // Kullanıcı adını bul
+                            const usernameRegex = new RegExp(`"id":${id}[^}]*?"username":"([^"]+)"`, 'g');
+                            const usernameMatch = usernameRegex.exec(response.data);
                             
-                            // Regex ile öğrenci bilgilerini çıkar
-                            const studentRegex = /"id":(\d+),"username":"([^"]+)".*?"role":"STUDENT".*?"email":"([^"]*)".*?"firstName":"([^"]*)".*?"lastName":"([^"]*)"/g;
-                            const students: Student[] = [];
-                            let match;
+                            // Ad, soyad ve email bul
+                            const detailsRegex = new RegExp(`"id":${id}[^}]*?"firstName":"([^"]+)"[^}]*?"lastName":"([^"]+)"[^}]*?"email":"([^"]+)"`, 'g');
+                            const detailsMatch = detailsRegex.exec(response.data);
                             
-                            while ((match = studentRegex.exec(data)) !== null) {
+                            const username = usernameMatch ? usernameMatch[1] : `student${id}`;
+                            const firstName = detailsMatch ? detailsMatch[1] : username;
+                            const lastName = detailsMatch ? detailsMatch[2] : '';
+                            const email = detailsMatch ? detailsMatch[3] : '';
+                            
+                            // Bu ID'ye sahip kullanıcı daha önce eklenmemiş ise ekle
+                            if (!users.some(u => u.id === id)) {
+                                users.push({
+                                    id,
+                                    username,
+                                    firstName,
+                                    lastName,
+                                    email,
+                                    studentNumber: `S${id}`
+                                });
+                            }
+                        });
+                        
+                        // Eğer yukarıdaki yaklaşım öğrenci bulmadıysa eski regex'i kullan
+                        if (users.length === 0) {
+                            while ((match = idRegex.exec(response.data)) !== null) {
                                 const id = parseInt(match[1]);
-                                if (!students.some(s => s.id === id)) {
-                                    students.push({
-                                        id: id,
-                                        username: match[2] || '',
-                                        email: match[3] || '',
-                                        firstName: match[4] || match[2] || '',
-                                        lastName: match[5] || '',
+                                const username = match[2];
+                                
+                                // Aynı ID'ye sahip kullanıcı varsa ekleme
+                                if (!users.some(u => u.id === id)) {
+                                    // İlgili kullanıcının diğer bilgilerini bulmak için regex
+                                    const userDetailsRegex = new RegExp(
+                                        `"id":${id}[^}]*"username":"${username}"[^}]*"firstName":"([^"]*)"[^}]*"lastName":"([^"]*)"[^}]*"email":"([^"]*)"`, 'g'
+                                    );
+                                    
+                                    const detailsMatch = userDetailsRegex.exec(response.data);
+                                    
+                                    users.push({
+                                        id,
+                                        username,
+                                        firstName: detailsMatch ? detailsMatch[1] : username,
+                                        lastName: detailsMatch ? detailsMatch[2] : '',
+                                        email: detailsMatch ? detailsMatch[3] : '',
                                         studentNumber: `S${id}`
                                     });
                                 }
                             }
-                            
-                            return students;
                         }
+                        
+                        // Son çare: Hiç user bulunmazsa, username içeren tüm yerleri bul
+                        if (users.length === 0) {
+                            const usernameRegex = /"username":"([^"]+)"/g;
+                            let usernameMatch;
+                            let counter = 1;
+                            
+                            while ((usernameMatch = usernameRegex.exec(response.data)) !== null) {
+                                const username = usernameMatch[1];
+                                if (!users.some(u => u.username === username)) {
+                                    users.push({
+                                        id: counter++,
+                                        username,
+                                        firstName: username,
+                                        lastName: '',
+                                        email: '',
+                                        studentNumber: `S${counter-1}`
+                                    });
+                                }
+                            }
+                        }
+
+                        console.log('Regex ile işlenen öğrenci sayısı:', users.length);
+                        return users;
                     }
-                    
-                    return [];
-                };
+                }
                 
-                // Veriyi işle
-                const processedStudents = processStudentData(response.data);
-                console.log('İşlenmiş öğrenciler:', processedStudents);
-                
-                return processedStudents.length > 0 ? processedStudents : [];
+                console.warn('Öğrenci verisi alınamadı');
+                return [];
             } catch (err: any) {
                 console.error('Öğrenciler alınırken hata oluştu:', err);
                 
@@ -279,124 +339,176 @@ const MentorDashboard: React.FC = () => {
             
             try {
                 console.log(`${selectedStudent} ID'li öğrencinin ödevleri alınıyor...`);
-                // Tam endpoint yolunu kullanıyoruz, başında / olmadan
+                // MentorAssignmentController'daki endpointi kullan
                 const response = await api.get(`mentor/assignments/${selectedStudent}`);
                 console.log('Ödevler alındı, ham veri:', response.data);
                 
-                // Ödev verilerini düzleştirmek için bir işlev
-                const processAssignmentData = (data: any): Assignment[] => {
-                    // Ham veri türüne göre işleyelim
-                    // Array ise her öğeyi düzleştir
-                    if (Array.isArray(data)) {
-                        return data.map(item => {
-                            // Her ödevi basit formata dönüştür
-                            let assignment: Assignment = {
-                                id: typeof item === 'object' ? item.id || 0 : 0,
-                                title: typeof item === 'object' ? item.title || `Ödev #${item.id || 0}` : '',
-                                description: typeof item === 'object' ? item.description || '' : '',
-                                submissionDate: typeof item === 'object' ? item.submissionDate || new Date().toISOString() : new Date().toISOString(),
-                                feedback: typeof item === 'object' ? item.feedback || '' : '',
-                                grade: typeof item === 'object' ? item.grade || undefined : undefined,
-                                fileName: typeof item === 'object' ? item.fileName || '' : '',
+                // Backend'den gelen veri dizi formatında ise doğrudan kullan
+                if (Array.isArray(response.data)) {
+                    return response.data.map((assignment: any) => ({
+                        id: assignment.id,
+                        title: assignment.title || `Ödev #${assignment.id}`,
+                        description: assignment.description || '',
+                        submissionDate: assignment.submissionDate || new Date().toISOString(),
+                        feedback: assignment.feedback || '',
+                        grade: assignment.grade,
+                        fileName: assignment.fileName || '',
+                        student: {
+                            id: selectedStudent
+                        }
+                    }));
+                }
+                
+                // String olarak gelen veriyi işle
+                if (typeof response.data === 'string') {
+                    try {
+                        console.log('Ham veri string formatında, JSON parse denenecek...');
+                        // JSON olarak parse etmeyi dene
+                        const parsedData = JSON.parse(response.data);
+                        if (Array.isArray(parsedData)) {
+                            return parsedData.map((assignment: any) => ({
+                                id: assignment.id,
+                                title: assignment.title || `Ödev #${assignment.id}`,
+                                description: assignment.description || '',
+                                submissionDate: assignment.submissionDate || new Date().toISOString(),
+                                feedback: assignment.feedback || '',
+                                grade: assignment.grade,
+                                fileName: assignment.fileName || '',
                                 student: {
                                     id: selectedStudent
                                 }
-                            };
-                            
-                            return assignment;
-                        }).slice(0, 20); // Performans için maksimum 20 ödev göster
-                    }
-                    
-                    // Obje ise ve içinde dizi varsa onu işle
-                    if (typeof data === 'object' && data !== null) {
-                        for (const key in data) {
-                            if (Array.isArray(data[key])) {
-                                return processAssignmentData(data[key]);
-                            }
+                            }));
+                        }
+                    } catch (parseError) {
+                        console.error('JSON parse hatası, regex ile çözmeye çalışılacak:', parseError);
+                        
+                        // Regex ile ödev ID'lerini ve dosya adlarını bul
+                        // REGEX'LE TÜM ÖDEVLERİ BULMAK İÇİN GELİŞTİRİLMİŞ YAKLAŞIM
+                        const assignments: Assignment[] = [];
+                        
+                        // Önce string içindeki tüm farklı ödev ID'lerini toplayalım
+                        const allIds = new Set<number>();
+                        const idOnlyRegex = /"id":(\d+)/g;
+                        let idMatch;
+                        
+                        while ((idMatch = idOnlyRegex.exec(response.data)) !== null) {
+                            const id = parseInt(idMatch[1]);
+                            if (id > 0) allIds.add(id);
                         }
                         
-                        // Tek bir ödev objesi olabilir
-                        if (data.id || data.fileName) {
-                            return [{
-                                id: data.id || 0,
-                                title: data.title || `Ödev #${data.id || 0}`,
-                                description: data.description || '',
-                                submissionDate: data.submissionDate || new Date().toISOString(),
-                                feedback: data.feedback || '',
-                                grade: data.grade || undefined,
-                                fileName: data.fileName || '',
-                                student: {
-                                    id: selectedStudent
-                                }
-                            }];
-                        }
-                    }
-                    
-                    // String ise JSON parse etmeyi dene
-                    if (typeof data === 'string') {
-                        try {
-                            // Tırnak işaretlerinde sorun olabilir, çözelim
-                            const cleanedData = data.replace(/\\"/g, '"').replace(/"{/g, '{').replace(/}"/g, '}');
-                            return processAssignmentData(JSON.parse(cleanedData));
-                        } catch (error) {
-                            console.error('JSON parse hatası, regex ile çözmeye çalışıyoruz:', error);
+                        console.log('Bulunan benzersiz ID sayısı:', allIds.size);
+                        
+                        // Her ID için ödev mi kontrolü yap (fileName içeren ID'ler ödev olabilir)
+                        const assignmentIds = new Set<number>();
+                        
+                        allIds.forEach(id => {
+                            // Bu ID bir ödev mi? fileName varsa ödevdir
+                            const isAssignmentRegex = new RegExp(`"id":${id}[^}]*?"fileName"`, 'g');
+                            if (isAssignmentRegex.test(response.data)) {
+                                assignmentIds.add(id);
+                            }
+                        });
+                        
+                        console.log('Bulunan ödev ID sayısı:', assignmentIds.size);
+                        
+                        // Her ödev ID'si için bilgileri bul
+                        assignmentIds.forEach(id => {
+                            // Dosya adını bul
+                            const fileNameRegex = new RegExp(`"id":${id}[^}]*?"fileName":"([^"]+)"`, 'g');
+                            const fileNameMatch = fileNameRegex.exec(response.data);
                             
-                            // Regex ile ödev bilgilerini çıkar
-                            const assignmentRegex = /"id":(\d+)[^}]*?"fileName":"([^"]*)"[^}]*?("submissionDate":"([^"]*)")?/g;
-                            const assignments: Assignment[] = [];
+                            // Diğer bilgileri bul (başlık, açıklama, tarih)
+                            const titleRegex = new RegExp(`"id":${id}[^}]*?"title":"([^"]+)"`, 'g');
+                            const titleMatch = titleRegex.exec(response.data);
+                            
+                            const descRegex = new RegExp(`"id":${id}[^}]*?"description":"([^"]+)"`, 'g');
+                            const descMatch = descRegex.exec(response.data);
+                            
+                            const dateRegex = new RegExp(`"id":${id}[^}]*?"submissionDate":"([^"]+)"`, 'g');
+                            const dateMatch = dateRegex.exec(response.data);
+                            
+                            // Geri bildirim ve not
+                            const feedbackRegex = new RegExp(`"id":${id}[^}]*?"feedback":"([^"]+)"`, 'g');
+                            const feedbackMatch = feedbackRegex.exec(response.data);
+                            
+                            const gradeRegex = new RegExp(`"id":${id}[^}]*?"grade":([0-9]+)`, 'g');
+                            const gradeMatch = gradeRegex.exec(response.data);
+                            
+                            // Bu ID'ye sahip ödev daha önce eklenmemiş ise ekle
+                            if (!assignments.some(a => a.id === id)) {
+                                assignments.push({
+                                    id,
+                                    title: titleMatch ? titleMatch[1] : `Ödev #${id}`,
+                                    description: descMatch ? descMatch[1] : '',
+                                    submissionDate: dateMatch ? dateMatch[1] : new Date().toISOString(),
+                                    feedback: feedbackMatch ? feedbackMatch[1] : '',
+                                    grade: gradeMatch ? parseInt(gradeMatch[1]) : undefined,
+                                    fileName: fileNameMatch ? fileNameMatch[1] : `odev-${id}.pdf`,
+                                    student: {
+                                        id: selectedStudent
+                                    }
+                                });
+                            }
+                        });
+                        
+                        // Eğer yukarıdaki yaklaşım ödev bulmadıysa eski regex'i kullan
+                        if (assignments.length === 0) {
+                            const assignmentRegex = /"id":(\d+)[^}]*"fileName":"([^"]+)"/g;
                             let match;
                             
-                            while ((match = assignmentRegex.exec(data)) !== null) {
+                            // Her bir eşleşme için Assignment nesnesi oluştur
+                            while ((match = assignmentRegex.exec(response.data)) !== null) {
                                 const id = parseInt(match[1]);
+                                const fileName = match[2];
+                                
+                                // Aynı ID'ye sahip ödev varsa ekleme
                                 if (!assignments.some(a => a.id === id)) {
                                     assignments.push({
-                                        id: id,
+                                        id,
                                         title: `Ödev #${id}`,
                                         description: '',
-                                        submissionDate: match[4] || new Date().toISOString(),
+                                        submissionDate: new Date().toISOString(),
                                         feedback: '',
                                         grade: undefined,
-                                        fileName: match[2] || '',
+                                        fileName,
                                         student: {
                                             id: selectedStudent
                                         }
                                     });
                                 }
                             }
-                            
-                            // Eğer hiçbir ödev bulunamadıysa, daha basit bir regex dene
-                            if (assignments.length === 0) {
-                                const simpleAssignmentRegex = /"id":(\d+)/g;
-                                while ((match = simpleAssignmentRegex.exec(data)) !== null) {
-                                    const id = parseInt(match[1]);
-                                    if (!assignments.some(a => a.id === id)) {
-                                        assignments.push({
-                                            id: id,
-                                            title: `Ödev #${id}`,
-                                            description: '',
-                                            submissionDate: new Date().toISOString(),
-                                            feedback: '',
-                                            grade: undefined,
-                                            fileName: `ÖdevDosyası-${id}`,
-                                            student: {
-                                                id: selectedStudent
-                                            }
-                                        });
-                                    }
+                        }
+                        
+                        // Son çare olarak, sadece ID'leri arayalım
+                        if (assignments.length === 0) {
+                            const simpleIdRegex = /"id":(\d+)[^}]*"student":/g;
+                            let match;
+                            while ((match = simpleIdRegex.exec(response.data)) !== null) {
+                                const id = parseInt(match[1]);
+                                if (!assignments.some(a => a.id === id)) {
+                                    assignments.push({
+                                        id,
+                                        title: `Ödev #${id}`,
+                                        description: '',
+                                        submissionDate: new Date().toISOString(),
+                                        feedback: '',
+                                        grade: undefined,
+                                        fileName: `ödev-${id}.pdf`,
+                                        student: {
+                                            id: selectedStudent
+                                        }
+                                    });
                                 }
                             }
-                            
-                            return assignments.slice(0, 20); // Performans için maksimum 20 ödev göster
                         }
+                        
+                        console.log('Regex ile işlenen ödev sayısı:', assignments.length);
+                        return assignments;
                     }
-                    
-                    return [];
-                };
+                }
                 
-                // Veriyi işle ve sonucu döndür
-                const processedAssignments = processAssignmentData(response.data);
-                console.log('İşlenmiş ödevler:', processedAssignments);
-                return processedAssignments.length > 0 ? processedAssignments : [];
+                console.warn('Ödev verisi alınamadı');
+                return [];
             } catch (err: any) {
                 console.error('Ödevler alınırken hata oluştu:', err);
                 setError(`Ödevler alınırken hata oluştu: ${err.message}`);
@@ -413,6 +525,7 @@ const MentorDashboard: React.FC = () => {
         mutationFn: async (data: { assignmentId: number; feedback: string; grade: number }) => {
             try {
                 console.log('Ödev değerlendiriliyor:', data);
+                // MentorAssignmentController'daki feedback endpointi kullan
                 const response = await api.put(
                     `mentor/assignments/${data.assignmentId}/feedback?feedback=${encodeURIComponent(data.feedback)}&grade=${data.grade}`
                 );
