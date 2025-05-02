@@ -1958,12 +1958,13 @@ const MentorDashboard: React.FC = () => {
           sx: {
             borderRadius: '20px',
             boxShadow: '0 15px 50px rgba(0, 0, 0, 0.25)',
-            background: 'rgba(255, 255, 255, 0.9)',
+            background: 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(10px)',
             overflow: 'hidden',
             border: '1px solid rgba(255, 255, 255, 0.8)',
             animation: `${fadeIn} 0.5s ease-out`,
             transform: 'perspective(1000px)',
+            position: 'relative',
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -1972,7 +1973,8 @@ const MentorDashboard: React.FC = () => {
               width: '150px',
               height: '150px',
               background: 'radial-gradient(circle, rgba(78, 205, 196, 0.15) 0%, transparent 70%)',
-              zIndex: 0
+              zIndex: -1, // Değişiklik: z-index'i negatifte tutuyoruz
+              pointerEvents: 'none'
             },
             '&::after': {
               content: '""',
@@ -1982,7 +1984,8 @@ const MentorDashboard: React.FC = () => {
               width: '100%',
               height: '100%',
               background: 'linear-gradient(to bottom, transparent 85%, rgba(255, 153, 102, 0.08))',
-              zIndex: 0
+              zIndex: -1, // Değişiklik: z-index'i negatifte tutuyoruz
+              pointerEvents: 'none'
             }
           }
         }}
@@ -1998,6 +2001,7 @@ const MentorDashboard: React.FC = () => {
           borderColor: 'rgba(0, 0, 0, 0.05)',
           position: 'relative',
           overflow: 'hidden',
+          zIndex: 5, // Değişiklik: İçerik z-index'i yükseltildi
           '&::after': {
             content: '""',
             position: 'absolute',
@@ -2007,7 +2011,9 @@ const MentorDashboard: React.FC = () => {
             height: '3px',
             background: 'linear-gradient(90deg, #FF9966, #4ECDC4, #1A535C)',
             backgroundSize: '200% 100%',
-            animation: `${flowingLine} 5s infinite linear`
+            animation: `${flowingLine} 5s infinite linear`,
+            zIndex: -1, // Değişiklik: Gradient çubuğu arkada tutuyoruz
+            pointerEvents: 'none'
           }
         }}>
           <AssignmentIcon 
@@ -2040,6 +2046,7 @@ const MentorDashboard: React.FC = () => {
             borderTop: 'none',
             background: 'rgba(255, 255, 255, 0.7)',
             position: 'relative',
+            zIndex: 10, // Değişiklik: İçerik z-index'i yükseltildi
             '&::before': {
               content: '""',
               position: 'absolute',
@@ -2048,7 +2055,8 @@ const MentorDashboard: React.FC = () => {
               right: 0,
               bottom: 0,
               backgroundImage: 'radial-gradient(circle at 70% 20%, rgba(63, 81, 181, 0.03) 0%, transparent 50%)',
-              zIndex: 0
+              zIndex: -1, // Değişiklik: z-index'i negatifte tutuyoruz
+              pointerEvents: 'none'
             }
           }}
         >
@@ -2238,29 +2246,31 @@ const MentorDashboard: React.FC = () => {
                         onChange={(e) => setFeedback(e.target.value)}
                         margin="normal"
                         required
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '12px',
-                transition: 'all 0.3s ease',
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(8px)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-                animation: `${glowingBorder} 4s infinite ease-in-out`,
-                '&:hover': {
-                  boxShadow: '0 4px 15px rgba(78, 205, 196, 0.2)',
-                },
-                '&.Mui-focused': {
-                  boxShadow: '0 4px 20px rgba(78, 205, 196, 0.25)',
-                }
-              },
-              '& .MuiFormLabel-root': {
-                color: '#1A535C',
-                fontWeight: 500
-              },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'rgba(78, 205, 196, 0.3)'
-              }
-            }}
+                        sx={{
+                          position: 'relative',
+                          zIndex: 20, // Değişiklik: Metin alanı z-index'i yükseltildi
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '12px',
+                            transition: 'all 0.3s ease',
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            backdropFilter: 'blur(8px)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                            animation: `${glowingBorder} 4s infinite ease-in-out`,
+                            '&:hover': {
+                              boxShadow: '0 4px 15px rgba(78, 205, 196, 0.2)',
+                            },
+                            '&.Mui-focused': {
+                              boxShadow: '0 4px 20px rgba(78, 205, 196, 0.25)',
+                            }
+                          },
+                          '& .MuiFormLabel-root': {
+                            color: '#1A535C',
+                            fontWeight: 500
+                          },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(78, 205, 196, 0.3)'
+                          }
+                        }}
                     />
                     <TextField
                         fullWidth
@@ -2271,57 +2281,63 @@ const MentorDashboard: React.FC = () => {
                         margin="normal"
                         required
                         inputProps={{ min: 0, max: 100 }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                borderRadius: '12px',
-                transition: 'all 0.3s ease',
-                backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                backdropFilter: 'blur(5px)',
-                '&:hover': {
-                  boxShadow: '0 0 0 2px rgba(63, 81, 181, 0.1)',
-                },
-                '&.Mui-focused': {
-                  boxShadow: '0 0 0 3px rgba(63, 81, 181, 0.2)',
-                }
-              },
-              '& .MuiFormLabel-root': {
-                color: 'text.secondary',
-                fontWeight: 500
-              }
-            }}
-          />
-          
-          <Box sx={{ 
-            mt: 2, 
-            px: 1, 
-            py: 1,
-            borderRadius: '8px',
-            backgroundColor: 'rgba(255, 252, 235, 0.7)',
-            backdropFilter: 'blur(5px)',
-            border: '1px solid rgba(255, 167, 38, 0.2)',
-          }}>
-            <Typography 
-              variant="caption" 
-              color="warning.dark"
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 0.5,
-                fontWeight: 500
-              }}
-            >
-              <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
-              Puanlama 0-100 arasında olmalıdır.
-            </Typography>
-          </Box>
-                </DialogContent>
+                        sx={{
+                          position: 'relative',
+                          zIndex: 20, // Değişiklik: Metin alanı z-index'i yükseltildi
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: '12px',
+                            transition: 'all 0.3s ease',
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            backdropFilter: 'blur(5px)',
+                            '&:hover': {
+                              boxShadow: '0 0 0 2px rgba(63, 81, 181, 0.1)',
+                            },
+                            '&.Mui-focused': {
+                              boxShadow: '0 0 0 3px rgba(63, 81, 181, 0.2)',
+                            }
+                          },
+                          '& .MuiFormLabel-root': {
+                            color: 'text.secondary',
+                            fontWeight: 500
+                          }
+                        }}
+                    />
+                    
+                    <Box sx={{ 
+                      mt: 2, 
+                      px: 1, 
+                      py: 1,
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(255, 252, 235, 0.7)',
+                      backdropFilter: 'blur(5px)',
+                      border: '1px solid rgba(255, 167, 38, 0.2)',
+                      position: 'relative',
+                      zIndex: 20
+                    }}>
+                      <Typography 
+                        variant="caption" 
+                        color="warning.dark"
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          fontWeight: 500
+                        }}
+                      >
+                        <InfoIcon fontSize="small" sx={{ fontSize: '1rem' }} />
+                        Puanlama 0-100 arasında olmalıdır.
+                      </Typography>
+                    </Box>
+          </DialogContent>
         <DialogActions sx={{ 
           px: 3, 
           py: 2.5, 
           gap: 1.5,
           background: 'rgba(245, 245, 247, 0.6)',
           backdropFilter: 'blur(5px)', 
-          borderTop: '1px solid rgba(0, 0, 0, 0.05)'
+          borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+          position: 'relative',
+          zIndex: 10 // Değişiklik: Button alanı z-index'i yükseltildi
         }}>
                     <Button 
             onClick={handleCloseDialog}
