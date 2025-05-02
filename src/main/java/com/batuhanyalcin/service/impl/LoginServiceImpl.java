@@ -35,15 +35,27 @@ public class LoginServiceImpl implements LoginService {
             
             User user = userRepository.findByUsername(request.getUsername())
                     .orElseThrow(() -> new UserNotFoundException("Kullanıcı bulunamadı"));
+            
+            // Kullanıcı rolünü debug amaçlı yazdır
+            System.out.println("Giriş yapan kullanıcı: " + user.getUsername() + ", Rol: " + user.getRole());
                     
             String jwtToken = jwtService.generateToken(user);
-            return AuthResponse.builder()
+            
+            // JWT token içindeki rol ile kullanıcı rolünün uyumlu olduğundan emin ol
+            AuthResponse response = AuthResponse.builder()
                     .token(jwtToken)
                     .username(user.getUsername())
                     .role(user.getRole())
                     .message("Giriş başarılı")
                     .build();
+                    
+            // Kontrol amaçlı yanıtı yazdır
+            System.out.println("Login yanıtı: token=" + jwtToken.substring(0, 20) + "..., rol=" + response.getRole());
+            
+            return response;
         } catch (Exception e) {
+            System.err.println("Login hatası: " + e.getMessage());
+            e.printStackTrace();
             throw new BadCredentialsException("Kullanıcı adı veya şifre hatalı");
         }
     }

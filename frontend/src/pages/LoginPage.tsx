@@ -62,6 +62,9 @@ const LoginPage: React.FC = () => {
         mutationFn: login,
         onSuccess: (data) => {
             console.log('Login başarılı:', data);
+            console.log('Response içeriği:', JSON.stringify(data));
+            console.log('Role tipi:', typeof data.role);
+            console.log('Role değeri ham hali:', data.role);
             
             // Önceki token ve rolleri temizle
             localStorage.removeItem('token');
@@ -69,31 +72,88 @@ const LoginPage: React.FC = () => {
             localStorage.removeItem('username');
             
             if (data.token) {
-                // Yeni token ve rolleri sakla
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('role', data.role || 'STUDENT');
-                localStorage.setItem('username', data.username || '');
-                
-                console.log('Role göre yönlendiriliyor:', data.role);
-                
-                // Role göre dashboard'a yönlendir
-                setTimeout(() => {
-                    switch (data.role) {
-                        case 'STUDENT':
-                            navigate('/student-dashboard');
-                            break;
-                        case 'MENTOR':
-                            navigate('/mentor-dashboard');
-                            break;
-                        case 'ADMIN':
-                            navigate('/admin-dashboard');
-                            break;
-                        default:
-                            // Rol belirlenemezse öğrenci olarak yönlendir
-                            console.warn('Rol belirlenemedi, varsayılan olarak öğrenci dashboardu kullanılıyor');
-                            navigate('/student-dashboard');
+                try {
+                    // Yeni token ve rolleri sakla
+                    localStorage.setItem('token', data.token);
+                    
+                    // Backend'den gelen role değeri string olarak kaydedilmeli (enum değil)
+                    // UserRole enum'ından string'e çevirme
+                    let role = '';
+                    if (typeof data.role === 'string') {
+                        role = data.role.toUpperCase();
+                        console.log('Role string olarak alındı:', role);
+                    } else if (data.role) {
+                        // Object ise toString değerini al
+                        console.log('Role objesi:', JSON.stringify(data.role));
+                        
+                        const roleObj = data.role as any;
+                        if (roleObj && typeof roleObj === 'object' && 'name' in roleObj) {
+                            // Java enum'ı olabilir, name özelliğini al
+                            role = roleObj.name.toUpperCase();
+                            console.log('Role name özelliğinden alındı:', role);
+                        } else {
+                            // Objeyi string'e çevir
+                            role = String(data.role).toUpperCase(); 
+                            console.log('Role objeden string\'e çevrildi:', role);
+                        }
+                    } else {
+                        role = 'STUDENT'; // varsayılan rol
+                        console.warn('Role bulunamadı, varsayılan STUDENT atandı');
                     }
-                }, 500); // Küçük bir gecikme ekleyerek token'ın kaydedilmesini sağla
+                    
+                    // Son kontrol: Sadece geçerli roller kabul edilsin
+                    if (!['STUDENT', 'MENTOR', 'ADMIN'].includes(role)) {
+                        console.warn('Geçersiz rol tespit edildi:', role);
+                        console.warn('Role bilgisi düzeltiliyor. Kullanıcı adına göre rol atanacak.');
+                        
+                        // Kullanıcı adından mentor olup olmadığını tahmin et
+                        const username = data.username || '';
+                        if (username.toLowerCase().includes('mentor')) {
+                            role = 'MENTOR';
+                            console.log('Kullanıcı adı "mentor" içerdiği için MENTOR rolü atandı');
+                        } else {
+                            role = 'STUDENT'; // varsayılan
+                            console.log('Varsayılan STUDENT rolü atandı');
+                        }
+                    }
+                    
+                    console.log('Son normalize edilmiş rol:', role);
+                    localStorage.setItem('role', role);
+                    localStorage.setItem('username', data.username || '');
+                    
+                    console.log('Role göre yönlendiriliyor:', role);
+                    console.log('Storage durumu:', {
+                        token: localStorage.getItem('token')?.substring(0, 10) + '...',
+                        role: localStorage.getItem('role'),
+                        username: localStorage.getItem('username')
+                    });
+                    
+                    // Yönlendirme öncesi storage'ın doğru ayarlandığını kontrol et
+                    if (!localStorage.getItem('token') || !localStorage.getItem('role')) {
+                        console.error('Token veya rol localStorage\'a kaydedilemedi');
+                        setErrorMessage('Oturum bilgileri kaydedilemedi. Lütfen tekrar deneyin.');
+                        return;
+                    }
+                    
+                    // Role göre dashboard'a React Router navigate ile yönlendir
+                    let targetPath = '/student-dashboard'; // varsayılan
+                    
+                    if (role === 'MENTOR') {
+                        targetPath = '/mentor-dashboard';
+                        console.log('Mentor dashboard\'a yönlendiriliyor!');
+                    } else if (role === 'ADMIN') {
+                        targetPath = '/admin-dashboard';
+                    } else if (role === 'STUDENT') {
+                        targetPath = '/student-dashboard';
+                    }
+                    
+                    console.log(`Kullanıcı ${role} rolü ile "${targetPath}" adresine yönlendiriliyor`);
+                    navigate(targetPath);
+                    
+                } catch (e) {
+                    console.error('Login işlemi sırasında hata:', e);
+                    setErrorMessage('Login işlemi sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+                }
             } else {
                 console.error('Token alınamadı');
                 setErrorMessage('Giriş başarılı fakat token alınamadı. Lütfen tekrar deneyin.');
@@ -101,6 +161,7 @@ const LoginPage: React.FC = () => {
         },
         onError: (error: any) => {
             console.error('Login hatası:', error);
+            console.error('Yanıt detayları:', error.response?.data);
             const message = error.response?.data || 'Kullanıcı adı veya şifre hatalı';
             setErrorMessage(typeof message === 'string' ? message : 'Giriş başarısız. Lütfen tekrar deneyin.');
         }

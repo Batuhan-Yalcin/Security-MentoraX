@@ -18,6 +18,22 @@ const api = axios.create({
 console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'Ortam:', process.env.NODE_ENV);
 console.log('%c[API CONFIG]', 'background: #222; color: #bada55', 'Backend URL:', API_URL);
 
+// Özel event oluştur (auth error için)
+export const AUTH_ERROR_EVENT = 'auth_error';
+export const triggerAuthError = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('role');
+  localStorage.removeItem('username');
+  
+  // Custom event yayınla
+  window.dispatchEvent(new CustomEvent(AUTH_ERROR_EVENT, {
+    detail: {
+      message: 'Oturum sonlandırıldı veya yetkisiz erişim',
+      timestamp: new Date().toISOString()
+    }
+  }));
+};
+
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
@@ -25,6 +41,8 @@ api.interceptors.request.use(
     if (token) {
       console.log('Token ekleniyor: ' + token.substring(0, 10) + '...');
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.log('Token bulunamadı, istek header\'a token eklenemedi');
     }
     console.log('%c[API REQUEST]', 'background: #2f4f4f; color: #90ee90', config.method?.toUpperCase() + ' ' + config.baseURL + config.url);
     return config;
@@ -38,42 +56,11 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    const endpoint = response.config.url || '';
-    console.log('Başarılı yanıt: ' + response.status + ' ' + endpoint);
-    
-    // Veri örneği göster ama string değilse dönüştür
-    let dataSample = '';
-    
-    if (response.data === null || response.data === undefined) {
-      dataSample = 'Veri yok (null/undefined)';
-    } else if (typeof response.data === 'object') {
-      try {
-        // Döngüsel referansları izlemek için Set oluştur
-        const seen = new Set();
-        
-        // Özellikle döngüsel referans durumlarında daha güvenli
-        dataSample = JSON.stringify(response.data, function(key, value) {
-          // Döngüsel referansı engelle - tekrarlanan nesneler için sadece ID değerini tut
-          if (key !== '' && typeof value === 'object' && value !== null) {
-            if (seen.has(value)) {
-              return value.id ? { id: value.id } : '[Döngüsel]';
-            }
-            seen.add(value);
-          }
-          return value;
-        }, 2).substring(0, 500);
-      } catch (error: any) {
-        dataSample = 'JSON dönüştürme hatası: ' + error.message;
-      }
-    } else {
-      dataSample = String(response.data).substring(0, 500);
-    }
-    
-    console.log('Yanıt veri örneği:', dataSample + (response.data && 
-          (typeof response.data === 'string' && response.data.length > 500 || 
-           typeof response.data === 'object' && JSON.stringify(response.data).length > 500) 
-        ? '...' : ''));
-    
+    console.log('%c[API RESPONSE]', 'background: #2f4f4f; color: #90ee90', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data,
+    });
     return response;
   },
   (error) => {
@@ -91,11 +78,8 @@ api.interceptors.response.use(
 
       // 401 veya 403 hatası - token geçersiz veya yetkisiz
       if (error.response.status === 401 || error.response.status === 403) {
-        console.log('Oturum sonlandırıldı. Giriş sayfasına yönlendiriliyor.');
-        localStorage.removeItem('token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('username');
-        window.location.href = '/login';
+        console.log('Oturum sonlandırıldı. Custom event ile bildirim yapılıyor.');
+        triggerAuthError(); // window.location.href yerine custom event kullan
       }
     } else if (error.request) {
       console.error('İstek Hatası (Sunucudan yanıt alınamadı):', error.request);

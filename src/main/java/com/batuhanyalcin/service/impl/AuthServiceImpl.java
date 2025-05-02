@@ -93,6 +93,9 @@ public class AuthServiceImpl implements AuthService {
         var jwtToken = jwtService.generateToken(user);
         return AuthResponse.builder()
                 .token(jwtToken)
+                .username(user.getUsername())
+                .role(user.getRole())
+                .message("Giriş başarılı")
                 .build();
     }
 }
