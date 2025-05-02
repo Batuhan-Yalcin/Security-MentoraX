@@ -1,28 +1,101 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
     Box, Typography, Paper, List, ListItem, ListItemText, CircularProgress, Alert,
     Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
     IconButton, Select, FormControl, InputLabel, Container, Grid, Card, CardContent,
-    Divider, Snackbar, FormHelperText, styled, Chip
+    Divider, Snackbar, FormHelperText, styled, Chip, Avatar, Tooltip, useMediaQuery,
+    LinearProgress, Badge, Fade, Grow, Zoom
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import LogoutIcon from '@mui/icons-material/Logout';
+import PersonIcon from '@mui/icons-material/Person';
+import SchoolIcon from '@mui/icons-material/School';
+import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { alpha, useTheme } from '@mui/material/styles';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
+// Stylelenmiş bileşenler
 const StyledPaper = styled(Paper)(({ theme }) => ({
     margin: theme.spacing(2),
-    padding: theme.spacing(2),
-    borderRadius: '12px',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-    transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+    padding: theme.spacing(3),
+    borderRadius: '16px',
+    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+    '&:hover': {
+        transform: 'translateY(-8px)',
+        boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.2)}`,
+    },
+    overflow: 'hidden',
+    position: 'relative',
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '4px',
+        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+    }
+}));
+
+const GradientButton = styled(Button)(({ theme }) => ({
+    background: `linear-gradient(45deg, ${theme.palette.primary.main} 30%, ${theme.palette.primary.light} 90%)`,
+    color: theme.palette.primary.contrastText,
+    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.2)',
+    transition: 'all 0.3s',
+    '&:hover': {
+        boxShadow: '0 6px 15px rgba(0, 0, 0, 0.3)',
+        transform: 'translateY(-2px)',
+    },
+}));
+
+const DashboardCard = styled(Card)(({ theme }) => ({
+    height: '100%',
+    borderRadius: '16px',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.3s ease',
+    overflow: 'hidden',
+    position: 'relative',
     '&:hover': {
         transform: 'translateY(-5px)',
-        boxShadow: `0 15px 30px ${alpha(theme.palette.primary.main, 0.15)}`,
+        boxShadow: '0 16px 32px rgba(0, 0, 0, 0.15)',
+    },
+}));
+
+const StyledBadge = styled(Badge)(({ theme }) => ({
+    '& .MuiBadge-badge': {
+        backgroundColor: '#44b700',
+        color: '#44b700',
+        boxShadow: `0 0 0 2px ${theme.palette.background.paper}`,
+        '&::after': {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            animation: 'ripple 1.2s infinite ease-in-out',
+            border: '1px solid currentColor',
+            content: '""',
+        },
+    },
+    '@keyframes ripple': {
+        '0%': {
+            transform: 'scale(.8)',
+            opacity: 1,
+        },
+        '100%': {
+            transform: 'scale(2.4)',
+            opacity: 0,
+        },
     },
 }));
 
@@ -68,6 +141,7 @@ interface NewUserData {
 const AdminDashboard: React.FC = () => {
     const theme = useTheme();
     const navigate = useNavigate();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -78,6 +152,14 @@ const AdminDashboard: React.FC = () => {
         show: false,
         message: '',
         type: 'success'
+    });
+    
+    // Dashboard özet istatistikleri
+    const [stats, setStats] = useState({
+        totalUsers: 0,
+        students: 0,
+        mentors: 0,
+        admins: 0
     });
     
     // Yeni kullanıcı oluşturma için state
@@ -124,6 +206,18 @@ const AdminDashboard: React.FC = () => {
             }
         },
     });
+
+    // İstatistikleri hesaplama
+    useEffect(() => {
+        if (users) {
+            setStats({
+                totalUsers: users.length,
+                students: users.filter((user: User) => user.role === 'STUDENT').length,
+                mentors: users.filter((user: User) => user.role === 'MENTOR').length,
+                admins: users.filter((user: User) => user.role === 'ADMIN').length
+            });
+        }
+    }, [users]);
 
     const { data: mentors, isLoading: mentorsLoading } = useQuery({
         queryKey: ['mentors'],
@@ -577,377 +671,924 @@ const AdminDashboard: React.FC = () => {
 
     if (isLoading) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-                <CircularProgress />
+            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh">
+                <Typography variant="h6" color="primary" gutterBottom>
+                    Admin Paneli Yükleniyor
+                </Typography>
+                <Box width="300px" mt={2}>
+                    <LinearProgress 
+                        color="primary" 
+                        sx={{ 
+                            height: 8, 
+                            borderRadius: 4,
+                            backgroundColor: alpha(theme.palette.primary.main, 0.2)
+                        }} 
+                    />
+                </Box>
             </Box>
         );
     }
 
     if (isError) {
         return (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-                <Alert severity="error">
-                    Kullanıcılar yüklenirken bir hata oluştu: {(error as Error)?.message || 'Bilinmeyen hata'}
-                </Alert>
-            </Box>
+            <Container maxWidth="md" sx={{ py: 8 }}>
+                <Box 
+                    display="flex" 
+                    flexDirection="column" 
+                    justifyContent="center" 
+                    alignItems="center"
+                    sx={{
+                        p: 4,
+                        borderRadius: 4,
+                        backgroundColor: alpha(theme.palette.error.main, 0.05),
+                        border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`
+                    }}
+                >
+                    <Typography variant="h5" color="error" gutterBottom>
+                        Veri Yüklenemedi
+                    </Typography>
+                    <Typography variant="body1" color="textSecondary" align="center" mb={3}>
+                        Kullanıcılar yüklenirken bir hata oluştu. Lütfen daha sonra tekrar deneyin.
+                    </Typography>
+                    <Typography variant="body2" color="error.dark" align="center" sx={{ maxWidth: '80%', wordBreak: 'break-word' }}>
+                        {(error as Error)?.message || 'Bilinmeyen hata'}
+                    </Typography>
+                    <Button 
+                        variant="contained" 
+                        color="primary" 
+                        onClick={() => refetch()} 
+                        sx={{ mt: 3 }}
+                        startIcon={<RefreshIcon />}
+                    >
+                        Yeniden Dene
+                    </Button>
+                </Box>
+            </Container>
         );
     }
 
     return (
-        <Container maxWidth="xl">
-            <Box p={3}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                    <Typography variant="h4" gutterBottom>
-                        Admin Paneli
-                    </Typography>
+        <Fade in={true} timeout={800}>
+            <Container maxWidth="xl" sx={{ py: 4 }}>
+                <Box 
+                    display="flex" 
+                    justifyContent="space-between" 
+                    alignItems="center" 
+                    mb={4}
+                    sx={{
+                        borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                        pb: 2
+                    }}
+                >
+                    <Box display="flex" alignItems="center">
+                        <AdminPanelSettingsIcon 
+                            sx={{ 
+                                fontSize: 40, 
+                                mr: 2,
+                                color: theme.palette.primary.main,
+                                animation: 'pulse 2s infinite ease-in-out',
+                                '@keyframes pulse': {
+                                    '0%': { opacity: 0.7 },
+                                    '50%': { opacity: 1 },
+                                    '100%': { opacity: 0.7 }
+                                }
+                            }} 
+                        />
+                        <Typography 
+                            variant="h4" 
+                            component="h1" 
+                            sx={{ 
+                                fontWeight: 700,
+                                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
+                            }}
+                        >
+                            Admin Paneli
+                        </Typography>
+                    </Box>
                     <Box>
-                        <Button 
+                        <GradientButton 
                             variant="contained" 
-                            color="primary" 
                             startIcon={<PersonAddIcon />}
                             onClick={handleOpenCreateDialog}
                             sx={{ mr: 2 }}
                         >
                             Yeni Kullanıcı
-                        </Button>
+                        </GradientButton>
                         <Button 
                             variant="outlined" 
                             color="secondary"
                             onClick={handleLogout}
+                            startIcon={<LogoutIcon />}
+                            sx={{
+                                borderRadius: '8px',
+                                transition: 'all 0.3s',
+                                '&:hover': {
+                                    backgroundColor: alpha(theme.palette.secondary.main, 0.1),
+                                    transform: 'translateY(-2px)'
+                                }
+                            }}
                         >
                             Çıkış Yap
                         </Button>
                     </Box>
                 </Box>
                 
+                {/* İstatistik Kartları */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 3, mb: 4 }}>
+                    <Fade in={true} timeout={800} style={{ transitionDelay: '100ms' }}>
+                        <DashboardCard 
+                            sx={{ 
+                                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)}, ${alpha(theme.palette.primary.dark, 0.8)})`,
+                                color: 'white'
+                            }}
+                        >
+                            <CardContent>
+                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                    <Typography variant="h6" component="div">
+                                        Toplam Kullanıcı
+                                    </Typography>
+                                    <Avatar 
+                                        sx={{ 
+                                            bgcolor: 'rgba(255,255,255,0.2)',
+                                            backdropFilter: 'blur(10px)',
+                                            p: 1
+                                        }}
+                                    >
+                                        <PersonIcon />
+                                    </Avatar>
+                                </Box>
+                                <Typography variant="h3" component="div" sx={{ mt: 2, fontWeight: 600 }}>
+                                    {stats.totalUsers}
+                                </Typography>
+                            </CardContent>
+                        </DashboardCard>
+                    </Fade>
+                    
+                    <Fade in={true} timeout={800} style={{ transitionDelay: '200ms' }}>
+                        <DashboardCard 
+                            sx={{ 
+                                background: `linear-gradient(135deg, ${alpha(theme.palette.success.main, 0.9)}, ${alpha(theme.palette.success.dark, 0.8)})`,
+                                color: 'white'
+                            }}
+                        >
+                            <CardContent>
+                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                    <Typography variant="h6" component="div">
+                                        Öğrenciler
+                                    </Typography>
+                                    <Avatar 
+                                        sx={{ 
+                                            bgcolor: 'rgba(255,255,255,0.2)',
+                                            backdropFilter: 'blur(10px)',
+                                            p: 1
+                                        }}
+                                    >
+                                        <SchoolIcon />
+                                    </Avatar>
+                                </Box>
+                                <Typography variant="h3" component="div" sx={{ mt: 2, fontWeight: 600 }}>
+                                    {stats.students}
+                                </Typography>
+                            </CardContent>
+                        </DashboardCard>
+                    </Fade>
+                    
+                    <Fade in={true} timeout={800} style={{ transitionDelay: '300ms' }}>
+                        <DashboardCard 
+                            sx={{ 
+                                background: `linear-gradient(135deg, ${alpha(theme.palette.info.main, 0.9)}, ${alpha(theme.palette.info.dark, 0.8)})`,
+                                color: 'white'
+                            }}
+                        >
+                            <CardContent>
+                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                    <Typography variant="h6" component="div">
+                                        Mentorlar
+                                    </Typography>
+                                    <Avatar 
+                                        sx={{ 
+                                            bgcolor: 'rgba(255,255,255,0.2)',
+                                            backdropFilter: 'blur(10px)',
+                                            p: 1
+                                        }}
+                                    >
+                                        <SupervisorAccountIcon />
+                                    </Avatar>
+                                </Box>
+                                <Typography variant="h3" component="div" sx={{ mt: 2, fontWeight: 600 }}>
+                                    {stats.mentors}
+                                </Typography>
+                            </CardContent>
+                        </DashboardCard>
+                    </Fade>
+                    
+                    <Fade in={true} timeout={800} style={{ transitionDelay: '400ms' }}>
+                        <DashboardCard 
+                            sx={{ 
+                                background: `linear-gradient(135deg, ${alpha(theme.palette.warning.main, 0.9)}, ${alpha(theme.palette.warning.dark, 0.8)})`,
+                                color: 'white'
+                            }}
+                        >
+                            <CardContent>
+                                <Box display="flex" justifyContent="space-between" alignItems="center">
+                                    <Typography variant="h6" component="div">
+                                        Adminler
+                                    </Typography>
+                                    <Avatar 
+                                        sx={{ 
+                                            bgcolor: 'rgba(255,255,255,0.2)',
+                                            backdropFilter: 'blur(10px)',
+                                            p: 1
+                                        }}
+                                    >
+                                        <AdminPanelSettingsIcon />
+                                    </Avatar>
+                                </Box>
+                                <Typography variant="h3" component="div" sx={{ mt: 2, fontWeight: 600 }}>
+                                    {stats.admins}
+                                </Typography>
+                            </CardContent>
+                        </DashboardCard>
+                    </Fade>
+                </Box>
+                
                 <StyledPaper>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                        <Typography variant="h6" gutterBottom>
-                            Kullanıcılar
+                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+                        <Typography 
+                            variant="h5" 
+                            sx={{ 
+                                fontWeight: 600,
+                                position: 'relative',
+                                '&:after': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    bottom: -8,
+                                    left: 0,
+                                    width: '40px',
+                                    height: '4px',
+                                    borderRadius: '2px',
+                                    backgroundColor: theme.palette.primary.main
+                                }
+                            }}
+                        >
+                            Kullanıcı Listesi
                         </Typography>
                     </Box>
-                    <Divider sx={{ mb: 2 }} />
+                    <Divider sx={{ mb: 3 }} />
                     
-                    <List>
-                        {users?.map((user: User) => (
-                            <ListItem 
-                                key={user.id}
-                                sx={{
-                                    mb: 1,
-                                    border: `1px solid ${alpha(theme.palette.divider, 0.5)}`,
-                                    borderRadius: '8px',
-                                    p: 2,
-                                    '&:hover': {
-                                        bgcolor: alpha(theme.palette.primary.main, 0.05),
-                                        boxShadow: `0 4px 8px ${alpha(theme.palette.primary.main, 0.15)}`,
-                                    },
-                                    transition: 'all 0.3s ease-in-out'
-                                }}
-                            >
-                                <ListItemText
-                                    primary={
-                                        <Typography variant="subtitle1" fontWeight="bold">
-                                            {user.firstName} {user.lastName}
-                                        </Typography>
-                                    }
-                                    secondary={
-                                        <>
-                                            <Typography component="span" variant="body2" color="text.primary" display="block">
-                                                {user.role === 'ADMIN' ? '🔑 Admin' : 
-                                                 user.role === 'MENTOR' ? '👨‍🏫 Mentor' : 
-                                                 '🎓 Öğrenci'} - {user.email}
-                                            </Typography>
-                                            {user.student && (
-                                                <Typography component="span" variant="body2" color="text.secondary" display="block">
-                                                    Bölüm: {user.student.department} - Öğrenci No: {user.student.studentNumber}
-                                                    {user.student.mentorId && (
-                                                        <Chip 
-                                                            size="small" 
-                                                            label="Mentor Atanmış" 
-                                                            color="success" 
-                                                            sx={{ ml: 1, height: '20px' }} 
-                                                        />
-                                                    )}
-                                                </Typography>
-                                            )}
-                                            {user.mentor && (
-                                                <Typography component="span" variant="body2" color="text.secondary" display="block">
-                                                    Uzmanlık: {user.mentor.expertise || 'Belirtilmemiş'}
-                                                </Typography>
-                                            )}
-                                        </>
-                                    }
-                                />
-                                <Box display="flex" alignItems="center">
-                                    <IconButton onClick={() => handleOpenEditDialog(user)} color="primary" title="Düzenle">
-                                        <EditIcon />
-                                    </IconButton>
-                                    {user.role === 'STUDENT' && (
-                                        <Button
-                                            variant="outlined"
-                                            color="info"
-                                            onClick={() => handleOpenAssignDialog(user)}
-                                            sx={{ mx: 1 }}
-                                            size="small"
-                                            startIcon={user.student?.mentorId ? <EditIcon fontSize="small" /> : <AddIcon fontSize="small" />}
-                                        >
-                                            {user.student?.mentorId ? 'Mentor Değiştir' : 'Mentor Ata'}
-                                        </Button>
-                                    )}
-                                    <IconButton 
-                                        onClick={() => deleteUser(user.id)} 
-                                        disabled={isDeleting}
-                                        color="error"
-                                        title="Sil"
+                    <Fade in={true} timeout={800}>
+                        <List sx={{ p: 0 }}>
+                            {users && users.map((user: User) => (
+                                <ListItem 
+                                    key={user.id}
+                                    sx={{
+                                        mb: 2,
+                                        border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                                        borderRadius: '12px',
+                                        p: 3,
+                                        '&:hover': {
+                                            backgroundColor: alpha(theme.palette.primary.main, 0.03),
+                                            boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.08)}`,
+                                            transform: 'translateY(-3px)',
+                                        },
+                                        transition: 'all 0.3s ease-in-out'
+                                    }}
+                                >
+                                    <Box 
+                                        display="flex"
+                                        alignItems="center"
+                                        width="100%"
+                                        sx={{ 
+                                            flexDirection: { xs: 'column', sm: 'row' },
+                                            alignItems: { xs: 'flex-start', sm: 'center' }
+                                        }}
                                     >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </Box>
-                            </ListItem>
-                        ))}
-                    </List>
+                                        {/* Avatar bölümü */}
+                                        <StyledBadge
+                                            overlap="circular"
+                                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                            variant="dot"
+                                            sx={{ mr: { xs: 0, sm: 3 }, mb: { xs: 2, sm: 0 } }}
+                                        >
+                                            <Avatar 
+                                                sx={{ 
+                                                    width: 56, 
+                                                    height: 56,
+                                                    backgroundColor: user.role === 'ADMIN' 
+                                                        ? alpha(theme.palette.warning.main, 0.8) 
+                                                        : user.role === 'MENTOR'
+                                                            ? alpha(theme.palette.info.main, 0.8)
+                                                            : alpha(theme.palette.success.main, 0.8)
+                                                }}
+                                            >
+                                                {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                                            </Avatar>
+                                        </StyledBadge>
+                                        
+                                        {/* Kullanıcı bilgileri */}
+                                        <ListItemText
+                                            primary={
+                                                <Box display="flex" alignItems="center">
+                                                    <Typography variant="subtitle1" fontWeight="bold" sx={{ mr: 1 }}>
+                                                        {user.firstName} {user.lastName}
+                                                    </Typography>
+                                                    <Chip 
+                                                        size="small" 
+                                                        label={
+                                                            user.role === 'ADMIN' ? 'Admin' : 
+                                                            user.role === 'MENTOR' ? 'Mentor' : 
+                                                            'Öğrenci'
+                                                        }
+                                                        color={
+                                                            user.role === 'ADMIN' ? 'warning' : 
+                                                            user.role === 'MENTOR' ? 'info' : 
+                                                            'success'
+                                                        }
+                                                        sx={{ 
+                                                            fontWeight: 500,
+                                                            borderRadius: '4px'
+                                                        }}
+                                                    />
+                                                </Box>
+                                            }
+                                            secondary={
+                                                <Box sx={{ mt: 1 }}>
+                                                    <Typography 
+                                                        component="span" 
+                                                        variant="body2" 
+                                                        color="text.primary" 
+                                                        display="block"
+                                                        sx={{ mb: 0.5 }}
+                                                    >
+                                                        <Box component="span" sx={{ opacity: 0.7, mr: 1 }}>
+                                                            {user.email}
+                                                        </Box>
+                                                        <Box component="span" sx={{ opacity: 0.5 }}>
+                                                            @{user.username}
+                                                        </Box>
+                                                    </Typography>
+                                                    {user.student && (
+                                                        <Typography 
+                                                            component="span" 
+                                                            variant="body2" 
+                                                            color="text.secondary" 
+                                                            display="block"
+                                                            sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
+                                                        >
+                                                            <Chip 
+                                                                size="small" 
+                                                                label={user.student.department} 
+                                                                variant="outlined"
+                                                                sx={{ mr: 1, my: 0.5 }}
+                                                            />
+                                                            <Chip 
+                                                                size="small" 
+                                                                label={`#${user.student.studentNumber}`}
+                                                                variant="outlined" 
+                                                                sx={{ mr: 1, my: 0.5 }}
+                                                            />
+                                                            {user.student.mentorId && (
+                                                                <Chip 
+                                                                    size="small" 
+                                                                    label="Mentor Atanmış" 
+                                                                    color="success" 
+                                                                    sx={{ my: 0.5 }} 
+                                                                />
+                                                            )}
+                                                        </Typography>
+                                                    )}
+                                                    {user.mentor && (
+                                                        <Typography 
+                                                            component="span" 
+                                                            variant="body2" 
+                                                            color="text.secondary" 
+                                                            display="block"
+                                                        >
+                                                            <Chip 
+                                                                size="small" 
+                                                                label={user.mentor.expertise || 'Belirtilmemiş'} 
+                                                                color="info" 
+                                                                variant="outlined"
+                                                            />
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            }
+                                            sx={{ flex: 1 }}
+                                        />
+                                        
+                                        {/* İşlem butonları */}
+                                        <Box 
+                                            display="flex" 
+                                            alignItems="center"
+                                            sx={{ 
+                                                mt: { xs: 2, sm: 0 },
+                                                alignSelf: { xs: 'flex-end', sm: 'center' }
+                                            }}
+                                        >
+                                            <Tooltip title="Düzenle">
+                                                <IconButton 
+                                                    onClick={() => handleOpenEditDialog(user)} 
+                                                    color="primary"
+                                                    sx={{ 
+                                                        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                                                        mr: 1,
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': {
+                                                            backgroundColor: alpha(theme.palette.primary.main, 0.2),
+                                                            transform: 'scale(1.1)'
+                                                        }
+                                                    }}
+                                                >
+                                                    <EditIcon />
+                                                </IconButton>
+                                            </Tooltip>
+                                            {user.role === 'STUDENT' && (
+                                                <Tooltip title={user.student?.mentorId ? 'Mentor Değiştir' : 'Mentor Ata'}>
+                                                    <Button
+                                                        variant="outlined"
+                                                        color="info"
+                                                        onClick={() => handleOpenAssignDialog(user)}
+                                                        sx={{ 
+                                                            mx: 1, 
+                                                            borderRadius: '8px',
+                                                            transition: 'all 0.2s',
+                                                            '&:hover': {
+                                                                transform: 'scale(1.05)'
+                                                            }
+                                                        }}
+                                                        size="small"
+                                                        startIcon={user.student?.mentorId ? <EditIcon fontSize="small" /> : <AddIcon fontSize="small" />}
+                                                    >
+                                                        {user.student?.mentorId ? 'Mentor Değiştir' : 'Mentor Ata'}
+                                                    </Button>
+                                                </Tooltip>
+                                            )}
+                                            <Tooltip title="Sil">
+                                                <IconButton 
+                                                    onClick={() => deleteUser(user.id)} 
+                                                    disabled={isDeleting}
+                                                    color="error"
+                                                    sx={{ 
+                                                        backgroundColor: alpha(theme.palette.error.main, 0.1),
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': {
+                                                            backgroundColor: alpha(theme.palette.error.main, 0.2),
+                                                            transform: 'scale(1.1)'
+                                                        }
+                                                    }}
+                                                >
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    </Box>
+                                </ListItem>
+                            ))}
+                        </List>
+                    </Fade>
                 </StyledPaper>
-            </Box>
 
-            {/* Kullanıcı Düzenleme Dialog */}
-            <Dialog open={isEditDialogOpen} onClose={handleCloseDialogs} maxWidth="sm" fullWidth>
-                <DialogTitle>Kullanıcı Düzenle</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        fullWidth
-                        label="Kullanıcı Adı"
-                        value={selectedUser?.username || ''}
-                        onChange={(e) => setSelectedUser({ ...selectedUser!, username: e.target.value })}
-                        margin="normal"
-                    />
-                    <TextField
-                        fullWidth
-                        label="Ad"
-                        value={selectedUser?.firstName || ''}
-                        onChange={(e) => setSelectedUser({ ...selectedUser!, firstName: e.target.value })}
-                        margin="normal"
-                    />
-                    <TextField
-                        fullWidth
-                        label="Soyad"
-                        value={selectedUser?.lastName || ''}
-                        onChange={(e) => setSelectedUser({ ...selectedUser!, lastName: e.target.value })}
-                        margin="normal"
-                    />
-                    <TextField
-                        fullWidth
-                        label="E-posta"
-                        value={selectedUser?.email || ''}
-                        onChange={(e) => setSelectedUser({ ...selectedUser!, email: e.target.value })}
-                        margin="normal"
-                    />
-                    <TextField
-                        fullWidth
-                        label="Şifre (Değiştirmek için doldurun)"
-                        type="password"
-                        onChange={(e) => setSelectedUser({ ...selectedUser!, password: e.target.value })}
-                        margin="normal"
-                    />
-                    <FormControl fullWidth margin="normal">
-                        <InputLabel>Rol</InputLabel>
-                        <Select
-                            value={selectedUser?.role || ''}
-                            onChange={(e) => setSelectedUser({ ...selectedUser!, role: e.target.value })}
-                            label="Rol"
-                        >
-                            <MenuItem value="ADMIN">Admin</MenuItem>
-                            <MenuItem value="MENTOR">Mentor</MenuItem>
-                            <MenuItem value="STUDENT">Öğrenci</MenuItem>
-                        </Select>
-                    </FormControl>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialogs}>İptal</Button>
-                    <Button onClick={() => updateUser(selectedUser!)} disabled={isUpdating} color="primary" variant="contained">
-                        {isUpdating ? 'Kaydediliyor...' : 'Kaydet'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Yeni Kullanıcı Oluşturma Dialog */}
-            <Dialog open={isCreateDialogOpen} onClose={handleCloseDialogs} maxWidth="sm" fullWidth>
-                <DialogTitle>Yeni Kullanıcı Oluştur</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        fullWidth
-                        label="Kullanıcı Adı"
-                        value={newUser.username || ''}
-                        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                        margin="normal"
-                        error={!!validationErrors.username}
-                        helperText={validationErrors.username}
-                    />
-                    <TextField
-                        fullWidth
-                        label="Ad"
-                        value={newUser.firstName || ''}
-                        onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
-                        margin="normal"
-                        error={!!validationErrors.firstName}
-                        helperText={validationErrors.firstName}
-                    />
-                    <TextField
-                        fullWidth
-                        label="Soyad"
-                        value={newUser.lastName || ''}
-                        onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
-                        margin="normal"
-                        error={!!validationErrors.lastName}
-                        helperText={validationErrors.lastName}
-                    />
-                    <TextField
-                        fullWidth
-                        label="E-posta"
-                        value={newUser.email || ''}
-                        onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                        margin="normal"
-                        error={!!validationErrors.email}
-                        helperText={validationErrors.email}
-                    />
-                    <TextField
-                        fullWidth
-                        label="Şifre"
-                        type="password"
-                        value={newUser.password || ''}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                        margin="normal"
-                        error={!!validationErrors.password}
-                        helperText={validationErrors.password}
-                    />
-                    <FormControl fullWidth margin="normal" error={!!validationErrors.role}>
-                        <InputLabel>Rol</InputLabel>
-                        <Select
-                            value={newUser.role || ''}
-                            onChange={(e) => handleRoleChange(e.target.value as string)}
-                            label="Rol"
-                        >
-                            <MenuItem value="ADMIN">Admin</MenuItem>
-                            <MenuItem value="MENTOR">Mentor</MenuItem>
-                            <MenuItem value="STUDENT">Öğrenci</MenuItem>
-                        </Select>
-                        {validationErrors.role && <FormHelperText>{validationErrors.role}</FormHelperText>}
-                    </FormControl>
-                    
-                    {/* Rol seçimine göre ek alanlar */}
-                    {newUser.role === 'STUDENT' && (
-                        <>
-                            <TextField
-                                fullWidth
-                                label="Bölüm"
-                                value={newUser.student?.department || ''}
-                                onChange={(e) => setNewUser({ 
-                                    ...newUser, 
-                                    student: { ...newUser.student, department: e.target.value } 
-                                })}
-                                margin="normal"
-                                error={!!validationErrors.department}
-                                helperText={validationErrors.department}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Öğrenci Numarası"
-                                value={newUser.student?.studentNumber || ''}
-                                onChange={(e) => setNewUser({ 
-                                    ...newUser, 
-                                    student: { ...newUser.student, studentNumber: e.target.value } 
-                                })}
-                                margin="normal"
-                                error={!!validationErrors.studentNumber}
-                                helperText={validationErrors.studentNumber}
-                            />
-                        </>
-                    )}
-                    
-                    {newUser.role === 'MENTOR' && (
-                        <>
-                            <TextField
-                                fullWidth
-                                label="Uzmanlık Alanı"
-                                value={newUser.mentor?.expertise || ''}
-                                onChange={(e) => setNewUser({ 
-                                    ...newUser, 
-                                    mentor: { ...newUser.mentor, expertise: e.target.value } 
-                                })}
-                                margin="normal"
-                                error={!!validationErrors.expertise}
-                                helperText={validationErrors.expertise}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Biyografi"
-                                value={newUser.mentor?.bio || ''}
-                                onChange={(e) => setNewUser({ 
-                                    ...newUser, 
-                                    mentor: { ...newUser.mentor, bio: e.target.value } 
-                                })}
-                                multiline
-                                rows={4}
-                                margin="normal"
-                            />
-                        </>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialogs}>İptal</Button>
-                    <Button onClick={handleCreateUser} disabled={isCreating} color="primary" variant="contained">
-                        {isCreating ? 'Oluşturuluyor...' : 'Oluştur'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* Mentor Atama Dialog */}
-            <Dialog open={isAssignDialogOpen} onClose={handleCloseDialogs} maxWidth="sm" fullWidth>
-                <DialogTitle>Mentor Ata</DialogTitle>
-                <DialogContent>
-                    {mentorsLoading ? (
-                        <Box display="flex" justifyContent="center" p={3}>
-                            <CircularProgress size={30} />
-                        </Box>
-                    ) : (
+                {/* Kullanıcı Düzenleme Dialog */}
+                <Dialog 
+                    open={isEditDialogOpen} 
+                    onClose={handleCloseDialogs} 
+                    maxWidth="sm" 
+                    fullWidth
+                    TransitionComponent={Fade}
+                    transitionDuration={300}
+                    PaperProps={{ 
+                        sx: { 
+                            borderRadius: '16px',
+                            background: 'rgba(255,255,255,0.95)',
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 20px 80px rgba(0,0,0,0.15)'
+                        } 
+                    }}
+                >
+                    <DialogTitle sx={{ 
+                        pb: 1, 
+                        pt: 2.5,
+                        background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.05)}, transparent)`,
+                        borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}>
+                        <EditIcon color="primary" sx={{ mr: 1.5, fontSize: 24 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Kullanıcı Düzenle
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3, pt: 3 }}>
+                        <TextField
+                            fullWidth
+                            label="Kullanıcı Adı"
+                            value={selectedUser?.username || ''}
+                            onChange={(e) => setSelectedUser({ ...selectedUser!, username: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 2 }}
+                            InputProps={{
+                                startAdornment: <PersonIcon sx={{ mr: 1, color: alpha(theme.palette.text.primary, 0.5) }} />,
+                            }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Ad"
+                            value={selectedUser?.firstName || ''}
+                            onChange={(e) => setSelectedUser({ ...selectedUser!, firstName: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 2 }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Soyad"
+                            value={selectedUser?.lastName || ''}
+                            onChange={(e) => setSelectedUser({ ...selectedUser!, lastName: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 2 }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="E-posta"
+                            value={selectedUser?.email || ''}
+                            onChange={(e) => setSelectedUser({ ...selectedUser!, email: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 2 }}
+                            InputProps={{
+                                startAdornment: <Box component="span" sx={{ color: alpha(theme.palette.text.primary, 0.5), mr: 1 }}>@</Box>,
+                            }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Şifre (Değiştirmek için doldurun)"
+                            type="password"
+                            onChange={(e) => setSelectedUser({ ...selectedUser!, password: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 2 }}
+                        />
                         <FormControl fullWidth margin="normal">
-                            <InputLabel>Mentor</InputLabel>
+                            <InputLabel>Rol</InputLabel>
                             <Select
-                                value={selectedMentorId}
-                                onChange={(e) => setSelectedMentorId(e.target.value as number)}
-                                label="Mentor"
+                                value={selectedUser?.role || ''}
+                                onChange={(e) => setSelectedUser({ ...selectedUser!, role: e.target.value })}
+                                label="Rol"
                             >
-                                {mentors?.map((mentor: User) => (
-                                    <MenuItem key={mentor.id} value={mentor.id}>
-                                        {mentor.firstName} {mentor.lastName}
-                                    </MenuItem>
-                                ))}
+                                <MenuItem value="ADMIN">Admin</MenuItem>
+                                <MenuItem value="MENTOR">Mentor</MenuItem>
+                                <MenuItem value="STUDENT">Öğrenci</MenuItem>
                             </Select>
                         </FormControl>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialogs}>İptal</Button>
-                    <Button onClick={handleAssignMentor} disabled={isAssigning || !selectedMentorId || mentorsLoading} color="primary" variant="contained">
-                        {isAssigning ? 'Atanıyor...' : 'Ata'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-            
-            {/* Bildirimler */}
-            <Snackbar
-                open={alert.show}
-                autoHideDuration={6000}
-                onClose={() => setAlert(prev => ({ ...prev, show: false }))}
-                message={alert.message}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                ContentProps={{
-                    sx: {
-                        bgcolor: alert.type === 'success' ? 'success.main' : 'error.main',
-                        color: 'white',
-                    }
-                }}
-            />
-        </Container>
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                        <Button 
+                            onClick={handleCloseDialogs}
+                            variant="outlined"
+                            sx={{
+                                borderRadius: '8px',
+                                px: 3,
+                            }}
+                        >
+                            İptal
+                        </Button>
+                        <Button 
+                            onClick={() => updateUser(selectedUser!)} 
+                            disabled={isUpdating} 
+                            color="primary" 
+                            variant="contained"
+                            sx={{
+                                borderRadius: '8px',
+                                px: 3,
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                            }}
+                        >
+                            {isUpdating ? (
+                                <>
+                                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                                    Kaydediliyor...
+                                </>
+                            ) : 'Kaydet'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Yeni Kullanıcı Oluşturma Dialog */}
+                <Dialog 
+                    open={isCreateDialogOpen} 
+                    onClose={handleCloseDialogs} 
+                    maxWidth="sm" 
+                    fullWidth
+                    TransitionComponent={Fade}
+                    transitionDuration={300}
+                    PaperProps={{ 
+                        sx: { 
+                            borderRadius: '16px',
+                            background: 'rgba(255,255,255,0.95)',
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 20px 80px rgba(0,0,0,0.15)'
+                        } 
+                    }}
+                >
+                    <DialogTitle sx={{ 
+                        pb: 1, 
+                        pt: 2.5,
+                        background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.05)}, transparent)`,
+                        borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}>
+                        <PersonAddIcon color="primary" sx={{ mr: 1.5, fontSize: 24 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Yeni Kullanıcı Oluştur
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3, pt: 3 }}>
+                        <TextField
+                            fullWidth
+                            label="Kullanıcı Adı"
+                            value={newUser.username || ''}
+                            onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 1 }}
+                            error={!!validationErrors.username}
+                            helperText={validationErrors.username}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Ad"
+                            value={newUser.firstName || ''}
+                            onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 1 }}
+                            error={!!validationErrors.firstName}
+                            helperText={validationErrors.firstName}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Soyad"
+                            value={newUser.lastName || ''}
+                            onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 1 }}
+                            error={!!validationErrors.lastName}
+                            helperText={validationErrors.lastName}
+                        />
+                        <TextField
+                            fullWidth
+                            label="E-posta"
+                            value={newUser.email || ''}
+                            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 1 }}
+                            error={!!validationErrors.email}
+                            helperText={validationErrors.email}
+                            InputProps={{
+                                startAdornment: <Box component="span" sx={{ color: alpha(theme.palette.text.primary, 0.5), mr: 1 }}>@</Box>,
+                            }}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Şifre"
+                            type="password"
+                            value={newUser.password || ''}
+                            onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                            margin="normal"
+                            variant="outlined"
+                            sx={{ mb: 1 }}
+                            error={!!validationErrors.password}
+                            helperText={validationErrors.password}
+                        />
+                        <FormControl fullWidth margin="normal" error={!!validationErrors.role}>
+                            <InputLabel>Rol</InputLabel>
+                            <Select
+                                value={newUser.role || ''}
+                                onChange={(e) => handleRoleChange(e.target.value as string)}
+                                label="Rol"
+                            >
+                                <MenuItem value="ADMIN">Admin</MenuItem>
+                                <MenuItem value="MENTOR">Mentor</MenuItem>
+                                <MenuItem value="STUDENT">Öğrenci</MenuItem>
+                            </Select>
+                            {validationErrors.role && <FormHelperText>{validationErrors.role}</FormHelperText>}
+                        </FormControl>
+                        
+                        {/* Rol seçimine göre ek alanlar */}
+                        {newUser.role === 'STUDENT' && (
+                            <>
+                                <TextField
+                                    fullWidth
+                                    label="Bölüm"
+                                    value={newUser.student?.department || ''}
+                                    onChange={(e) => setNewUser({ 
+                                        ...newUser, 
+                                        student: { ...newUser.student, department: e.target.value } 
+                                    })}
+                                    margin="normal"
+                                    variant="outlined"
+                                    sx={{ mb: 1 }}
+                                    error={!!validationErrors.department}
+                                    helperText={validationErrors.department}
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Öğrenci Numarası"
+                                    value={newUser.student?.studentNumber || ''}
+                                    onChange={(e) => setNewUser({ 
+                                        ...newUser, 
+                                        student: { ...newUser.student, studentNumber: e.target.value } 
+                                    })}
+                                    margin="normal"
+                                    variant="outlined"
+                                    sx={{ mb: 1 }}
+                                    error={!!validationErrors.studentNumber}
+                                    helperText={validationErrors.studentNumber}
+                                />
+                            </>
+                        )}
+                        
+                        {newUser.role === 'MENTOR' && (
+                            <>
+                                <TextField
+                                    fullWidth
+                                    label="Uzmanlık Alanı"
+                                    value={newUser.mentor?.expertise || ''}
+                                    onChange={(e) => setNewUser({ 
+                                        ...newUser, 
+                                        mentor: { ...newUser.mentor, expertise: e.target.value } 
+                                    })}
+                                    margin="normal"
+                                    variant="outlined"
+                                    sx={{ mb: 1 }}
+                                    error={!!validationErrors.expertise}
+                                    helperText={validationErrors.expertise}
+                                />
+                                <TextField
+                                    fullWidth
+                                    label="Biyografi"
+                                    value={newUser.mentor?.bio || ''}
+                                    onChange={(e) => setNewUser({ 
+                                        ...newUser, 
+                                        mentor: { ...newUser.mentor, bio: e.target.value } 
+                                    })}
+                                    multiline
+                                    rows={4}
+                                    margin="normal"
+                                    variant="outlined"
+                                />
+                            </>
+                        )}
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                        <Button 
+                            onClick={handleCloseDialogs}
+                            variant="outlined"
+                            sx={{
+                                borderRadius: '8px',
+                                px: 3,
+                            }}
+                        >
+                            İptal
+                        </Button>
+                        <Button 
+                            onClick={handleCreateUser} 
+                            disabled={isCreating} 
+                            color="primary" 
+                            variant="contained"
+                            sx={{
+                                borderRadius: '8px',
+                                px: 3,
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                            }}
+                        >
+                            {isCreating ? (
+                                <>
+                                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                                    Oluşturuluyor...
+                                </>
+                            ) : 'Oluştur'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+                
+                {/* Mentor Atama Dialog */}
+                <Dialog 
+                    open={isAssignDialogOpen} 
+                    onClose={handleCloseDialogs} 
+                    maxWidth="sm" 
+                    fullWidth
+                    TransitionComponent={Fade}
+                    transitionDuration={300}
+                    PaperProps={{ 
+                        sx: { 
+                            borderRadius: '16px',
+                            background: 'rgba(255,255,255,0.95)',
+                            backdropFilter: 'blur(10px)',
+                            boxShadow: '0 20px 80px rgba(0,0,0,0.15)'
+                        } 
+                    }}
+                >
+                    <DialogTitle sx={{ 
+                        pb: 1, 
+                        pt: 2.5,
+                        background: `linear-gradient(90deg, ${alpha(theme.palette.info.main, 0.05)}, transparent)`,
+                        borderBottom: `1px solid ${alpha(theme.palette.info.main, 0.1)}`,
+                        display: 'flex',
+                        alignItems: 'center'
+                    }}>
+                        <SupervisorAccountIcon color="info" sx={{ mr: 1.5, fontSize: 24 }} />
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Mentor Ata
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3, pt: 3 }}>
+                        {mentorsLoading ? (
+                            <Box display="flex" justifyContent="center" p={3}>
+                                <CircularProgress size={30} />
+                            </Box>
+                        ) : (
+                            <FormControl fullWidth margin="normal">
+                                <InputLabel>Mentor</InputLabel>
+                                <Select
+                                    value={selectedMentorId}
+                                    onChange={(e) => setSelectedMentorId(e.target.value as number)}
+                                    label="Mentor"
+                                >
+                                    {mentors?.map((mentor: User) => (
+                                        <MenuItem key={mentor.id} value={mentor.id}>
+                                            {mentor.firstName} {mentor.lastName}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        )}
+                    </DialogContent>
+                    <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                        <Button 
+                            onClick={handleCloseDialogs}
+                            variant="outlined"
+                            sx={{
+                                borderRadius: '8px',
+                                px: 3,
+                            }}
+                        >
+                            İptal
+                        </Button>
+                        <Button 
+                            onClick={handleAssignMentor} 
+                            disabled={isAssigning || !selectedMentorId || mentorsLoading} 
+                            color="info" 
+                            variant="contained"
+                            sx={{
+                                borderRadius: '8px',
+                                px: 3,
+                                boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+                            }}
+                        >
+                            {isAssigning ? (
+                                <>
+                                    <CircularProgress size={20} color="inherit" sx={{ mr: 1 }} />
+                                    Atanıyor...
+                                </>
+                            ) : 'Ata'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+                
+                {/* Bildirimler */}
+                <Snackbar
+                    open={alert.show}
+                    autoHideDuration={6000}
+                    onClose={() => setAlert(prev => ({ ...prev, show: false }))}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                    sx={{ mb: 2 }}
+                >
+                    <Alert 
+                        severity={alert.type} 
+                        variant="filled"
+                        sx={{ 
+                            width: '100%',
+                            boxShadow: '0 5px 20px rgba(0,0,0,0.15)',
+                            borderRadius: '10px',
+                            px: 2,
+                            py: 1
+                        }}
+                        onClose={() => setAlert(prev => ({ ...prev, show: false }))}
+                    >
+                        {alert.message}
+                    </Alert>
+                </Snackbar>
+            </Container>
+        </Fade>
     );
 };
 
