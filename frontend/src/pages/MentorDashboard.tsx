@@ -90,6 +90,21 @@ interface AssignmentRawResponse {
     [key: string]: any; // Diğer alanlar için
 }
 
+// api.ts'deki URL konfigürasyonunda başında / olduğu için burada / koymuyoruz
+// Ayrıca var olan api URL'deki çifte slash sorununu düzeltelim
+// api servisinde URL sonunda / olduğu için burada başında / olmamalı
+api.interceptors.request.use(
+  (config) => {
+    // URL'de çift slash kontrolü yapalım ve düzeltelim
+    if (config.url?.startsWith('/') && config.baseURL?.endsWith('/')) {
+      config.url = config.url.substring(1);
+    }
+    
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 const MentorDashboard: React.FC = () => {
     const navigate = useNavigate();
     const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -135,150 +150,98 @@ const MentorDashboard: React.FC = () => {
                 console.log('Token durumu:', localStorage.getItem('token') ? 'Var' : 'Yok');
                 console.log('Role durumu:', localStorage.getItem('role'));
                 
+                // api servisi zaten baseURL'yi http://localhost:8080/api/ olarak tanımladı,
+                // bu nedenle başında / olmadan endpoint'i çağırıyoruz
                 const response = await api.get('mentor/students');
                 console.log('Öğrenciler alındı, ham veri:', response.data);
-                console.log('Veri tipi:', typeof response.data);
                 
-                // Veri kontrolü ve dönüşüm
-                let studentsArray = [];
-                
-                // Null check
-                if (!response.data) {
-                    console.error('API yanıtında veri bulunamadı');
-                    return [];
-                }
-                
-                // String check - regex ile ana kullanıcı listesini çıkar
-                if (typeof response.data === 'string') {
-                    try {
-                        console.log('String veri işleniyor...');
-                        
-                        // Daha esnek ve güçlü regex deseni (daha fazla öğrenciyi yakalaması için)
-                        const userInfoRegex = /"id":(\d+),"username":"([^"]+)".*?"role":"STUDENT".*?"email":"([^"]*)".*?"firstName":"([^"]*)".*?"lastName":"([^"]*)"/g;
-                        
-                        const matches = [];
-                        let match;
-                        
-                        // Tüm eşleşmeleri bul
-                        while ((match = userInfoRegex.exec(response.data)) !== null) {
-                            console.log('Öğrenci eşleşmesi bulundu:', match);
-                            // Boş olabilecek alanlara varsayılan değerler ver
-                            matches.push({
-                                id: parseInt(match[1]),
-                                username: match[2],
-                                email: match[3] || `ogrenci${match[1]}@example.com`,
-                                firstName: match[4] || match[2], // Firstname yoksa username kullan
-                                lastName: match[5] || '',
-                                studentNumber: `S${match[1]}${Math.floor(Math.random() * 1000)}` // Örnek öğrenci numarası
-                            });
-                        }
-                        
-                        // Daha az katı ikinci regex (ilk regex hiç öğrenci bulamazsa)
-                        if (matches.length === 0) {
-                            console.log('İlk regex ile öğrenci bulunamadı, daha esnek ikinci regex deneniyor...');
-                            const backupRegex = /"id":(\d+),"username":"([^"]+)"/g;
+                // Öğrenci verilerini düzleştirmek için bir işlev
+                const processStudentData = (data: any): Student[] => {
+                    // Array ise her öğeyi düzleştir
+                    if (Array.isArray(data)) {
+                        return data.map(item => {
+                            // Her öğrenciyi basit formata dönüştür
+                            let student: Student = {
+                                id: typeof item === 'object' ? item.id || 0 : 0,
+                                username: typeof item === 'object' ? item.username || '' : '',
+                                firstName: typeof item === 'object' ? item.firstName || '' : '',
+                                lastName: typeof item === 'object' ? item.lastName || '' : '',
+                                email: typeof item === 'object' ? item.email || '' : '',
+                                studentNumber: ''
+                            };
                             
-                            while ((match = backupRegex.exec(response.data)) !== null) {
-                                console.log('Yedek regex ile öğrenci eşleşmesi bulundu:', match);
-                                matches.push({
-                                    id: parseInt(match[1]),
-                                    username: match[2],
-                                    email: `ogrenci${match[1]}@example.com`,
-                                    firstName: match[2], // Username'i firstname olarak kullan
-                                    lastName: '',
-                                    studentNumber: `S${match[1]}`
-                                });
+                            // Öğrenci numarasını ekle (farklı veri yapılarını destekle)
+                            if (typeof item === 'object') {
+                                if (item.studentNumber) {
+                                    student.studentNumber = item.studentNumber;
+                                } else if (item.student && item.student.studentNumber) {
+                                    student.studentNumber = item.student.studentNumber;
+                                } else {
+                                    student.studentNumber = `S${student.id}`;
+                                }
+                            }
+                            
+                            return student;
+                        });
+                    }
+                    
+                    // Obje ise ve içinde dizi varsa onu işle
+                    if (typeof data === 'object' && data !== null) {
+                        for (const key in data) {
+                            if (Array.isArray(data[key])) {
+                                return processStudentData(data[key]);
                             }
                         }
                         
-                        // Tekrar eden öğrencileri filtrele (id'ye göre)
-                        const uniqueStudents = Array.from(new Map(matches.map(item => [item.id, item])).values());
-                        console.log('Çıkarılan benzersiz öğrenciler:', uniqueStudents);
-                        
-                        if (uniqueStudents.length > 0) {
-                            studentsArray = uniqueStudents;
+                        // Tek bir öğrenci objesi olabilir
+                        if (data.id || data.username) {
+                            return [processStudentData([data])[0]];
                         }
-                    } catch (error) {
-                        console.error('Veri işleme hatası:', error);
                     }
-                } 
-                // Array check
-                else if (Array.isArray(response.data)) {
-                    studentsArray = response.data;
                     
-                    // Öğrencileri basitleştir (iç içe geçmiş nesneleri düzleştir)
-                    studentsArray = studentsArray.map((student: StudentRawResponse) => {
-                        // Kompleks veri yapısından basit öğrenci nesnesi oluştur
-                        return {
-                            id: student.id || (student.student?.id),
-                            username: student.username || '',
-                            firstName: student.firstName || '',
-                            lastName: student.lastName || '',
-                            email: student.email || '',
-                            studentNumber: student.student?.studentNumber || `S${student.id}`,
-                        };
-                    });
-                }
-                // Object check - array içeriyor mu
-                else if (typeof response.data === 'object' && response.data !== null) {
-                    // Eğer nesne bir öğrenci listesi içeriyorsa
-                    if (response.data.length > 0) {
-                        studentsArray = response.data;
-                    } else {
-                        const keys = Object.keys(response.data);
-                        for (const key of keys) {
-                            if (Array.isArray(response.data[key])) {
-                                studentsArray = response.data[key];
-                                break;
+                    // String ise JSON parse etmeyi dene
+                    if (typeof data === 'string') {
+                        try {
+                            // Tırnak işaretlerinde sorun olabilir, çözelim
+                            const cleanedData = data.replace(/\\"/g, '"').replace(/"{/g, '{').replace(/}"/g, '}');
+                            return processStudentData(JSON.parse(cleanedData));
+                        } catch (error) {
+                            console.error('JSON parse hatası, regex ile çözmeye çalışıyoruz:', error);
+                            
+                            // Regex ile öğrenci bilgilerini çıkar
+                            const studentRegex = /"id":(\d+),"username":"([^"]+)".*?"role":"STUDENT".*?"email":"([^"]*)".*?"firstName":"([^"]*)".*?"lastName":"([^"]*)"/g;
+                            const students: Student[] = [];
+                            let match;
+                            
+                            while ((match = studentRegex.exec(data)) !== null) {
+                                const id = parseInt(match[1]);
+                                if (!students.some(s => s.id === id)) {
+                                    students.push({
+                                        id: id,
+                                        username: match[2] || '',
+                                        email: match[3] || '',
+                                        firstName: match[4] || match[2] || '',
+                                        lastName: match[5] || '',
+                                        studentNumber: `S${id}`
+                                    });
+                                }
                             }
+                            
+                            return students;
                         }
                     }
                     
-                    // Öğrencileri basitleştir (iç içe geçmiş nesneleri düzleştir)
-                    studentsArray = studentsArray.map((student: StudentRawResponse) => {
-                        // Kompleks veri yapısından basit öğrenci nesnesi oluştur
-                        return {
-                            id: student.id || (student.student?.id) || 0,
-                            username: student.username || '',
-                            firstName: student.firstName || '',
-                            lastName: student.lastName || '',
-                            email: student.email || '',
-                            studentNumber: student.student?.studentNumber || `S${student.id || 0}`,
-                        };
-                    });
-                }
+                    return [];
+                };
                 
-                // Öğrencileri id'ye göre sırala
-                studentsArray.sort((a: Student, b: Student) => a.id - b.id);
+                // Veriyi işle
+                const processedStudents = processStudentData(response.data);
+                console.log('İşlenmiş öğrenciler:', processedStudents);
                 
-                // Boş dizi dönme durumunda manuel test verileri ekle
-                if (studentsArray.length === 0) {
-                    console.log('Öğrenci verisi bulunamadı, manuel test verisi ekleniyor...');
-                    studentsArray = [
-                        {
-                            id: 1,
-                            username: "deneme",
-                            firstName: "Deneme",
-                            lastName: "Öğrenci",
-                            email: "deneme@mail.com",
-                            studentNumber: "S12345"
-                        },
-                        {
-                            id: 2,
-                            username: "deneme2",
-                            firstName: "Deneme 2",
-                            lastName: "Öğrenci",
-                            email: "deneme2@mail.com",
-                            studentNumber: "S54321"
-                        }
-                    ];
-                }
-                
-                console.log('İşlenmiş öğrenci dizisi:', studentsArray);
-                return studentsArray;
+                return processedStudents.length > 0 ? processedStudents : [];
             } catch (err: any) {
                 console.error('Öğrenciler alınırken hata oluştu:', err);
-                // Detaylı hata bilgisi
+                
                 if (err.response) {
                     console.error('Yanıt detayları:', {
                         status: err.response.status,
@@ -296,29 +259,11 @@ const MentorDashboard: React.FC = () => {
                 }
                 
                 setError(`Öğrenciler alınırken hata oluştu: ${err.message}`);
-                // Hata durumunda da test verilerini göster
-                return [
-                    {
-                        id: 1,
-                        username: "deneme",
-                        firstName: "Deneme",
-                        lastName: "Öğrenci",
-                        email: "deneme@mail.com",
-                        studentNumber: "S12345"
-                    },
-                    {
-                        id: 2,
-                        username: "deneme2",
-                        firstName: "Deneme 2",
-                        lastName: "Öğrenci",
-                        email: "deneme2@mail.com",
-                        studentNumber: "S54321"
-                    }
-                ];
+                return [];
             }
         },
-        retry: false,
-        retryOnMount: false,
+        retry: 1,
+        retryOnMount: true,
     });
 
     // Ödevleri getir
@@ -334,70 +279,84 @@ const MentorDashboard: React.FC = () => {
             
             try {
                 console.log(`${selectedStudent} ID'li öğrencinin ödevleri alınıyor...`);
+                // Tam endpoint yolunu kullanıyoruz, başında / olmadan
                 const response = await api.get(`mentor/assignments/${selectedStudent}`);
-                console.log('Ödevler alındı:', response.data);
-                console.log('Ödevler veri tipi:', typeof response.data);
+                console.log('Ödevler alındı, ham veri:', response.data);
                 
-                // Veri kontrolü ve dönüşüm
-                let assignmentsArray = [];
-                
-                // Null check
-                if (!response.data) {
-                    console.error('Ödevler API yanıtında veri bulunamadı');
-                    return [];
-                }
-                
-                // String check - JSON parse etmeyi dene
-                if (typeof response.data === 'string') {
-                    try {
-                        console.log('Ödevler string veri işleniyor...');
-                        
-                        // JSON parse etmeyi dene
-                        try {
-                            const parsed = JSON.parse(response.data);
-                            console.log('Ödevler parse edildi:', parsed);
-                            
-                            if (Array.isArray(parsed)) {
-                                assignmentsArray = parsed;
-                            } else if (parsed && typeof parsed === 'object') {
-                                // Obje içinde array var mı kontrol et
-                                const keys = Object.keys(parsed);
-                                for (const key of keys) {
-                                    if (Array.isArray(parsed[key])) {
-                                        assignmentsArray = parsed[key];
-                                        break;
-                                    }
+                // Ödev verilerini düzleştirmek için bir işlev
+                const processAssignmentData = (data: any): Assignment[] => {
+                    // Ham veri türüne göre işleyelim
+                    // Array ise her öğeyi düzleştir
+                    if (Array.isArray(data)) {
+                        return data.map(item => {
+                            // Her ödevi basit formata dönüştür
+                            let assignment: Assignment = {
+                                id: typeof item === 'object' ? item.id || 0 : 0,
+                                title: typeof item === 'object' ? item.title || `Ödev #${item.id || 0}` : '',
+                                description: typeof item === 'object' ? item.description || '' : '',
+                                submissionDate: typeof item === 'object' ? item.submissionDate || new Date().toISOString() : new Date().toISOString(),
+                                feedback: typeof item === 'object' ? item.feedback || '' : '',
+                                grade: typeof item === 'object' ? item.grade || undefined : undefined,
+                                fileName: typeof item === 'object' ? item.fileName || '' : '',
+                                student: {
+                                    id: selectedStudent
                                 }
+                            };
+                            
+                            return assignment;
+                        }).slice(0, 20); // Performans için maksimum 20 ödev göster
+                    }
+                    
+                    // Obje ise ve içinde dizi varsa onu işle
+                    if (typeof data === 'object' && data !== null) {
+                        for (const key in data) {
+                            if (Array.isArray(data[key])) {
+                                return processAssignmentData(data[key]);
                             }
-                        } catch (parseError) {
-                            console.error('Ödevler JSON parse hatası:', parseError);
+                        }
+                        
+                        // Tek bir ödev objesi olabilir
+                        if (data.id || data.fileName) {
+                            return [{
+                                id: data.id || 0,
+                                title: data.title || `Ödev #${data.id || 0}`,
+                                description: data.description || '',
+                                submissionDate: data.submissionDate || new Date().toISOString(),
+                                feedback: data.feedback || '',
+                                grade: data.grade || undefined,
+                                fileName: data.fileName || '',
+                                student: {
+                                    id: selectedStudent
+                                }
+                            }];
+                        }
+                    }
+                    
+                    // String ise JSON parse etmeyi dene
+                    if (typeof data === 'string') {
+                        try {
+                            // Tırnak işaretlerinde sorun olabilir, çözelim
+                            const cleanedData = data.replace(/\\"/g, '"').replace(/"{/g, '{').replace(/}"/g, '}');
+                            return processAssignmentData(JSON.parse(cleanedData));
+                        } catch (error) {
+                            console.error('JSON parse hatası, regex ile çözmeye çalışıyoruz:', error);
                             
-                            // Regex ile ödev bilgilerini çıkarmayı dene
-                            // Regex desenini daha sıkı yapalım - JSON formatındaki Assignment nesnesini arıyoruz
-                            // Başında { olan ve daha sonra "id":[sayı] içeren assignment daha güvenilir olacak
-                            const assignmentRegex = /\{\s*"id"\s*:\s*(\d+)[^}]*?"title"\s*:\s*"([^"]*)"[^}]*?"submissionDate"\s*:\s*"([^"]*)"[^}]*?/g;
-                            const matches: Assignment[] = [];
+                            // Regex ile ödev bilgilerini çıkar
+                            const assignmentRegex = /"id":(\d+)[^}]*?"fileName":"([^"]*)"[^}]*?("submissionDate":"([^"]*)")?/g;
+                            const assignments: Assignment[] = [];
                             let match;
-                            let count = 0;
-                            const MAX_ASSIGNMENTS = 10; // Maksimum 10 ödev göster
                             
-                            while ((match = assignmentRegex.exec(response.data)) !== null && count < MAX_ASSIGNMENTS) {
+                            while ((match = assignmentRegex.exec(data)) !== null) {
                                 const id = parseInt(match[1]);
-                                const title = match[2] || `Ödev #${id}`;
-                                const date = match[3] || new Date().toISOString();
-                                
-                                // Duplicate ID kontrolü
-                                if (!matches.some(m => m.id === id)) {
-                                    console.log(`Geçerli ödev bulundu - ID: ${id}, Başlık: ${title}`);
-                                    count++;
-                                    matches.push({
+                                if (!assignments.some(a => a.id === id)) {
+                                    assignments.push({
                                         id: id,
-                                        title: title,
-                                        submissionDate: date,
-                                        description: "Ödev açıklaması.",
-                                        feedback: "",
+                                        title: `Ödev #${id}`,
+                                        description: '',
+                                        submissionDate: match[4] || new Date().toISOString(),
+                                        feedback: '',
                                         grade: undefined,
-                                        fileName: `odev_${id}.pdf`,
+                                        fileName: match[2] || '',
                                         student: {
                                             id: selectedStudent
                                         }
@@ -405,184 +364,48 @@ const MentorDashboard: React.FC = () => {
                                 }
                             }
                             
-                            // Eğer hiç ödev bulunamadıysa, backend yanıtında assignment ID'lerini ara
-                            if (matches.length === 0) {
-                                console.log('Daha basit ödev arama yöntemi deneniyor...');
-                                
-                                // Backende göre ödevlerin tam yapısını bilmiyoruz, bu nedenle varsayılan ödevleri kullanacağız
-                                const now = new Date();
-                                const lastWeek = new Date();
-                                lastWeek.setDate(lastWeek.getDate() - 7);
-                                
-                                matches.push({
-                                    id: 1,
-                                    title: "Spring Boot Temel Uygulama",
-                                    description: "Spring Boot kullanarak basit bir CRUD uygulaması geliştirin.",
-                                    submissionDate: lastWeek.toISOString(),
-                                    feedback: "",
-                                    grade: undefined,
-                                    fileName: "spring_uygulama.zip",
-                                    student: {
-                                        id: selectedStudent
+                            // Eğer hiçbir ödev bulunamadıysa, daha basit bir regex dene
+                            if (assignments.length === 0) {
+                                const simpleAssignmentRegex = /"id":(\d+)/g;
+                                while ((match = simpleAssignmentRegex.exec(data)) !== null) {
+                                    const id = parseInt(match[1]);
+                                    if (!assignments.some(a => a.id === id)) {
+                                        assignments.push({
+                                            id: id,
+                                            title: `Ödev #${id}`,
+                                            description: '',
+                                            submissionDate: new Date().toISOString(),
+                                            feedback: '',
+                                            grade: undefined,
+                                            fileName: `ÖdevDosyası-${id}`,
+                                            student: {
+                                                id: selectedStudent
+                                            }
+                                        });
                                     }
-                                });
-                                
-                                matches.push({
-                                    id: 2,
-                                    title: "React Dashboard Projesi",
-                                    description: "Material UI kullanarak responsive bir dashboard tasarlayın.",
-                                    submissionDate: now.toISOString(),
-                                    feedback: "",
-                                    grade: undefined,
-                                    fileName: "react_dashboard.zip",
-                                    student: {
-                                        id: selectedStudent
-                                    }
-                                });
+                                }
                             }
                             
-                            if (matches.length > 0) {
-                                assignmentsArray = matches;
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Ödevler veri işleme hatası:', error);
-                    }
-                } 
-                // Array check
-                else if (Array.isArray(response.data)) {
-                    assignmentsArray = response.data;
-                    
-                    // Fazla ödev varsa ilk 10 tanesini al
-                    if (assignmentsArray.length > 10) {
-                        console.log(`${assignmentsArray.length} ödev bulundu, ilk 10 tanesi gösteriliyor.`);
-                        assignmentsArray = assignmentsArray.slice(0, 10);
-                    }
-                }
-                // Object check - array içeriyor mu
-                else if (typeof response.data === 'object' && response.data !== null) {
-                    if (response.data.length > 0) {
-                        assignmentsArray = response.data;
-                    } else {
-                        const keys = Object.keys(response.data);
-                        for (const key of keys) {
-                            if (Array.isArray(response.data[key])) {
-                                assignmentsArray = response.data[key];
-                                break;
-                            }
+                            return assignments.slice(0, 20); // Performans için maksimum 20 ödev göster
                         }
                     }
                     
-                    // Fazla ödev varsa ilk 10 tanesini al
-                    if (assignmentsArray.length > 10) {
-                        console.log(`${assignmentsArray.length} ödev bulundu, ilk 10 tanesi gösteriliyor.`);
-                        assignmentsArray = assignmentsArray.slice(0, 10);
-                    }
-                }
+                    return [];
+                };
                 
-                // Ödevleri düzleştir ve gerekli alanların varlığından emin ol
-                assignmentsArray = assignmentsArray.map((assignment: AssignmentRawResponse) => {
-                    return {
-                        id: assignment.id || 0,
-                        title: assignment.title || `Ödev #${assignment.id || 0}`,
-                        description: assignment.description || '',
-                        submissionDate: assignment.submissionDate || new Date().toISOString(),
-                        feedback: assignment.feedback || '',
-                        grade: assignment.grade,
-                        fileName: assignment.fileName || `odev_${assignment.id || 0}.pdf`,
-                        student: {
-                            id: assignment.student?.id || selectedStudent
-                        }
-                    };
-                });
-                
-                // Ödevleri ID'ye göre sırala
-                assignmentsArray.sort((a: Assignment, b: Assignment) => a.id - b.id);
-                
-                // Ödev sayısını kontrol et, çok fazla ödev varsa sadece ilk 10'unu göster
-                if (assignmentsArray.length > 10) {
-                    console.log(`${assignmentsArray.length} ödev bulundu, ilk 10 tanesi gösteriliyor.`);
-                    assignmentsArray = assignmentsArray.slice(0, 10);
-                }
-                
-                // Boş dizi durumunda örnek veri ekle
-                if (assignmentsArray.length === 0) {
-                    console.log('Ödev verisi bulunamadı, örnek veri ekleniyor...');
-                    
-                    // Şu anki tarih
-                    const now = new Date();
-                    // 1 hafta önce
-                    const lastWeek = new Date();
-                    lastWeek.setDate(lastWeek.getDate() - 7);
-                    
-                    assignmentsArray = [
-                        {
-                            id: 1,
-                            title: "Spring Boot Temel Uygulama",
-                            description: "Spring Boot kullanarak basit bir CRUD uygulaması geliştirin.",
-                            submissionDate: lastWeek.toISOString(),
-                            feedback: "",
-                            grade: undefined,
-                            fileName: "spring_uygulama.zip",
-                            student: {
-                                id: selectedStudent
-                            }
-                        },
-                        {
-                            id: 2,
-                            title: "React Dashboard Projesi",
-                            description: "Material UI kullanarak responsive bir dashboard tasarlayın.",
-                            submissionDate: now.toISOString(),
-                            feedback: "",
-                            grade: undefined,
-                            fileName: "react_dashboard.zip",
-                            student: {
-                                id: selectedStudent
-                            }
-                        }
-                    ];
-                }
-                
-                console.log('İşlenmiş ödev dizisi:', assignmentsArray);
-                return assignmentsArray;
+                // Veriyi işle ve sonucu döndür
+                const processedAssignments = processAssignmentData(response.data);
+                console.log('İşlenmiş ödevler:', processedAssignments);
+                return processedAssignments.length > 0 ? processedAssignments : [];
             } catch (err: any) {
                 console.error('Ödevler alınırken hata oluştu:', err);
                 setError(`Ödevler alınırken hata oluştu: ${err.message}`);
-                
-                // Hata durumunda örnek veri
-                const now = new Date();
-                const lastWeek = new Date();
-                lastWeek.setDate(lastWeek.getDate() - 7);
-                
-                return [
-                    {
-                        id: 1,
-                        title: "Spring Boot Temel Uygulama",
-                        description: "Spring Boot kullanarak basit bir CRUD uygulaması geliştirin.",
-                        submissionDate: lastWeek.toISOString(),
-                        feedback: "",
-                        grade: undefined,
-                        fileName: "spring_uygulama.zip",
-                        student: {
-                            id: selectedStudent
-                        }
-                    },
-                    {
-                        id: 2,
-                        title: "React Dashboard Projesi",
-                        description: "Material UI kullanarak responsive bir dashboard tasarlayın.",
-                        submissionDate: now.toISOString(),
-                        feedback: "",
-                        grade: undefined,
-                        fileName: "react_dashboard.zip",
-                        student: {
-                            id: selectedStudent
-                        }
-                    }
-                ];
+                return [];
             }
         },
         enabled: !!selectedStudent,
+        retry: 1,
+        retryOnMount: true,
     });
 
     // Ödev değerlendirme
