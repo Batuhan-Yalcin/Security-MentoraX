@@ -22,48 +22,423 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Chip
+  Chip,
+  alpha,
+  useTheme
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
+import { styled, keyframes } from '@mui/material/styles';
 import { useNavigate } from 'react-router-dom';
-import { UploadFile, Download, Person, School, Badge, CalendarMonth } from '@mui/icons-material';
+import { UploadFile, Download, Person, School, Badge, CalendarMonth, Assignment as AssignmentIcon } from '@mui/icons-material';
 import api from '../services/api';
+import { Theme } from '@mui/material/styles';
+
+// Animasyonlar
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
+
+const pulse = keyframes`
+  0% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(25, 118, 210, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+`;
+
+const float = keyframes`
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-10px) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(0deg);
+  }
+  75% {
+    transform: translateY(-10px) rotate(3deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+`;
+
+const glow = keyframes`
+  0% {
+    box-shadow: 0 0 10px 2px ${alpha('#1976d2', 0.5)};
+  }
+  50% {
+    box-shadow: 0 0 20px 6px ${alpha('#1976d2', 0.3)};
+  }
+  100% {
+    box-shadow: 0 0 10px 2px ${alpha('#1976d2', 0.5)};
+  }
+`;
+
+const shimmer = keyframes`
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+`;
+
+const bounce = keyframes`
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+`;
+
+const rotateGlow = keyframes`
+  0% {
+    transform: rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+    filter: hue-rotate(360deg);
+  }
+`;
+
+// Stillendirilmiş bileşenler
+const PageContainer = styled(Box)(({ theme }) => ({
+    padding: theme.spacing(3),
+    minHeight: '100vh',
+    backgroundImage: `linear-gradient(120deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.secondary.light, 0.1)} 100%)`,
+    backgroundAttachment: 'fixed',
+    position: 'relative',
+    overflow: 'hidden',
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: 'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%)',
+        pointerEvents: 'none',
+    },
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: `
+            radial-gradient(circle at 10% 90%, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 30%),
+            radial-gradient(circle at 90% 10%, ${alpha(theme.palette.secondary.main, 0.05)} 0%, transparent 30%),
+            linear-gradient(60deg, ${alpha(theme.palette.primary.dark, 0.02)} 0%, transparent 50%)
+        `,
+        backgroundSize: '200% 200%, 200% 200%, 200% 200%',
+        animation: `${shimmer} 15s ease-in-out infinite alternate`,
+        pointerEvents: 'none',
+        zIndex: 0,
+    }
+}));
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
     margin: theme.spacing(2),
     padding: theme.spacing(3),
-    borderRadius: '12px',
-    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.1)',
-    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+    borderRadius: '16px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+    backdropFilter: 'blur(10px)',
+    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+    background: `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.95)} 0%, ${alpha(theme.palette.background.paper, 0.9)} 100%)`,
+    animation: `${fadeIn} 0.6s ease-out`,
+    transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+    position: 'relative',
+    overflow: 'hidden',
     '&:hover': {
         transform: 'translateY(-5px)',
-        boxShadow: '0 10px 20px rgba(0, 0, 0, 0.15)',
+        boxShadow: `0 15px 30px ${alpha(theme.palette.primary.main, 0.15)}`,
     },
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '5px',
+        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+        opacity: 0.8,
+        zIndex: 1,
+    }
+}));
+
+const ProfileCard = styled(StyledPaper)(({ theme }) => ({
+    overflow: 'hidden',
+    position: 'relative',
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: '100%',
+        height: '100px',
+        background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.2)} 0%, ${alpha(theme.palette.secondary.light, 0.2)} 100%)`,
+        zIndex: 0,
+    },
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        background: `radial-gradient(circle at 90% 10%, ${alpha(theme.palette.primary.main, 0.1)} 0%, transparent 50%)`,
+        zIndex: 0,
+        pointerEvents: 'none'
+    }
+}));
+
+const ProfileContent = styled(Box)(({ theme }) => ({
+    position: 'relative',
+    zIndex: 1,
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: -30,
+        right: -30,
+        width: '100px',
+        height: '100px',
+        background: `radial-gradient(circle, ${alpha(theme.palette.secondary.light, 0.5)} 0%, transparent 70%)`,
+        borderRadius: '50%',
+        filter: 'blur(20px)',
+        zIndex: -1,
+        opacity: 0.7
+    }
+}));
+
+const StyledListItem = styled(ListItem)(({ theme }) => ({
+    borderRadius: '8px',
+    transition: 'background-color 0.2s ease',
+    marginBottom: theme.spacing(1),
+    '&:hover': {
+        backgroundColor: alpha(theme.palette.primary.main, 0.05),
+    }
+}));
+
+const InfoItem = styled(ListItem)(({ theme }) => ({
+    borderRadius: '12px',
+    marginBottom: theme.spacing(1.5),
+    padding: theme.spacing(1.5, 2),
+    background: alpha(theme.palette.background.paper, 0.6),
+    backdropFilter: 'blur(10px)',
+    border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+    transition: 'all 0.3s ease',
+    '&:hover': {
+        background: alpha(theme.palette.primary.main, 0.08),
+        transform: 'translateX(5px)',
+        boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.1)}`
+    },
+    '& .MuiListItemText-primary': {
+        fontWeight: 600,
+        fontSize: '0.95rem',
+        marginBottom: '4px'
+    },
+    '& .MuiListItemText-secondary': {
+        fontSize: '0.9rem'
+    },
+    '& .MuiSvgIcon-root': {
+        transition: 'transform 0.3s ease',
+    },
+    '&:hover .MuiSvgIcon-root': {
+        transform: 'scale(1.2)',
+        color: theme.palette.primary.main
+    }
 }));
 
 const AssignmentCard = styled(Card)(({ theme }) => ({
     height: '100%',
     display: 'flex',
     flexDirection: 'column',
-    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+    borderRadius: '16px',
+    overflow: 'hidden',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+    transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+    background: theme.palette.background.paper,
+    position: 'relative',
     '&:hover': {
-        transform: 'translateY(-5px)',
-        boxShadow: '0 10px 20px rgba(0, 0, 0, 0.15)',
+        transform: 'translateY(-8px) scale(1.02)',
+        boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.2)}`,
+        '& .assignment-shine': {
+            opacity: 1,
+        },
+        '& .card-gradient': {
+            opacity: 1,
+            transform: 'translateY(0)'
+        }
     },
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '4px',
+        background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+    },
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: '30%',
+        height: '30%',
+        background: `radial-gradient(circle, ${alpha(theme.palette.primary.light, 0.1)} 0%, transparent 70%)`,
+        zIndex: 0,
+    }
+}));
+
+const CardGradient = styled(Box)(({ theme }) => ({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.05)} 0%, transparent 50%)`,
+    opacity: 0,
+    transform: 'translateY(10px)',
+    transition: 'opacity 0.3s ease, transform 0.3s ease',
+    zIndex: 0,
+    pointerEvents: 'none'
+}));
+
+const AssignmentShine = styled(Box)(({ theme }) => ({
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: `linear-gradient(90deg, 
+                ${alpha(theme.palette.background.paper, 0)} 25%, 
+                ${alpha(theme.palette.background.paper, 0.3)} 50%, 
+                ${alpha(theme.palette.background.paper, 0)} 75%)`,
+    backgroundSize: '200% 100%',
+    animation: `${shimmer} 2s infinite linear`,
+    pointerEvents: 'none',
+    opacity: 0,
+    transition: 'opacity 0.3s ease',
+    zIndex: 0,
 }));
 
 const CardTitle = styled(Typography)(({ theme }) => ({
     fontWeight: 'bold',
     marginBottom: theme.spacing(1),
+    fontSize: '1.1rem',
+    position: 'relative',
+    paddingLeft: theme.spacing(1),
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        left: -4,
+        top: 0,
+        bottom: 0,
+        width: '4px',
+        background: theme.palette.primary.main,
+        borderRadius: theme.shape.borderRadius,
+    },
 }));
 
 const ProfileAvatar = styled(Avatar)(({ theme }) => ({
-    width: 100,
-    height: 100,
+    width: 110,
+    height: 110,
     margin: 'auto',
     marginBottom: theme.spacing(2),
     backgroundColor: theme.palette.primary.main,
-    fontSize: '2.5rem',
+    fontSize: '2.8rem',
+    boxShadow: `0 8px 16px ${alpha(theme.palette.primary.main, 0.3)}`,
+    border: `4px solid ${theme.palette.background.paper}`,
+    animation: `${float} 6s ease-in-out infinite, ${glow} 3s ease-in-out infinite`,
+    position: 'relative',
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: '-8px',
+        left: '-8px',
+        right: '-8px',
+        bottom: '-8px',
+        borderRadius: '50%',
+        background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.2)} 0%, transparent 70%)`,
+        animation: `${pulse} 3s infinite`
+    }
+}));
+
+const GlowingButton = styled(Button)(({ theme }) => ({
+    borderRadius: '30px',
+    padding: '8px 24px',
+    transition: 'all 0.3s ease',
+    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+    position: 'relative',
+    overflow: 'hidden',
+    boxShadow: `0 4px 15px ${alpha(theme.palette.primary.main, 0.3)}`,
+    '&::after': {
+        content: '""',
+        position: 'absolute',
+        top: '-50%',
+        left: '-50%',
+        width: '200%',
+        height: '200%',
+        background: `radial-gradient(circle, ${alpha(theme.palette.common.white, 0.3)} 0%, ${alpha(theme.palette.common.white, 0)} 70%)`,
+        opacity: 0,
+        transform: 'scale(0.5)',
+        transition: 'transform 0.3s ease-out, opacity 0.3s ease-out',
+    },
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `linear-gradient(45deg, ${alpha(theme.palette.primary.main, 0)} 0%, ${alpha(theme.palette.primary.light, 0.5)} 50%, ${alpha(theme.palette.primary.main, 0)} 100%)`,
+        backgroundSize: '200% 200%',
+        animation: `${shimmer} 3s infinite linear`,
+        opacity: 0.5,
+        zIndex: 0,
+    },
+    '& .MuiButton-label': {
+        position: 'relative',
+        zIndex: 1,
+    },
+    '&:hover': {
+        transform: 'translateY(-3px)',
+        boxShadow: `0 7px 14px ${alpha(theme.palette.primary.main, 0.4)}`,
+        '&::after': {
+            opacity: 1,
+            transform: 'scale(1)',
+        }
+    },
+    '&:active': {
+        transform: 'translateY(1px)',
+    }
+}));
+
+const GradientText = styled(Typography)(({ theme }) => ({
+    background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.main})`,
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundSize: '200% 200%',
+    animation: `${shimmer} 5s ease infinite alternate`,
+    fontWeight: 'bold',
+    textShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    letterSpacing: '0.5px'
 }));
 
 // Döngüsel referansları manuel olarak işlemek için yardımcı fonksiyon
@@ -273,8 +648,30 @@ const extractAssignmentData = (data: string) => {
     }
 };
 
+// Dialog paper stilini bir değişken olarak tanımlıyorum
+const StyledDialogPaper = {
+    borderRadius: '16px',
+    boxShadow: '0 15px 50px rgba(0, 0, 0, 0.2)',
+    background: (theme: Theme) => `linear-gradient(135deg, ${alpha(theme.palette.background.paper, 0.97)} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
+    backdropFilter: 'blur(10px)',
+    border: (theme: Theme) => `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+    overflow: 'hidden',
+    position: 'relative',
+    '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '5px',
+        background: (theme: Theme) => `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+        zIndex: 1,
+    }
+};
+
 const StudentDashboard: React.FC = () => {
     const navigate = useNavigate();
+    const theme = useTheme();
     const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -552,12 +949,88 @@ const StudentDashboard: React.FC = () => {
 
     if (profileLoading || assignmentsLoading) {
         return (
-            <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh">
-                <CircularProgress size={60} thickness={4} />
-                <Typography variant="h6" color="textSecondary" sx={{ mt: 2 }}>
+            <Box 
+                display="flex" 
+                flexDirection="column" 
+                justifyContent="center" 
+                alignItems="center" 
+                minHeight="100vh"
+                sx={{
+                    background: `linear-gradient(120deg, ${alpha(theme.palette.primary.light, 0.1)} 0%, ${alpha(theme.palette.secondary.light, 0.1)} 100%)`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: '30%',
+                        left: '20%',
+                        width: '60%',
+                        height: '40%',
+                        background: `radial-gradient(circle, ${alpha(theme.palette.primary.light, 0.2)} 0%, transparent 70%)`,
+                        filter: 'blur(30px)',
+                        animation: `${rotateGlow} 8s linear infinite`
+                    }
+                }}
+            >
+                <Box
+                    sx={{
+                        position: 'relative',
+                        width: '120px',
+                        height: '120px',
+                        animation: `${bounce} 2s infinite ease-in-out`,
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            border: `4px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                            borderRadius: '50%',
+                        }
+                    }}
+                >
+                    <CircularProgress 
+                        size={120} 
+                        thickness={4} 
+                        sx={{ 
+                            color: theme.palette.primary.main,
+                            animation: `${pulse} 2s infinite`,
+                            position: 'absolute',
+                            top: 0,
+                            left: 0
+                        }} 
+                    />
+                    <CircularProgress 
+                        size={90} 
+                        thickness={3} 
+                        sx={{ 
+                            color: theme.palette.secondary.main,
+                            animation: `${rotateGlow} 3s linear infinite`,
+                            position: 'absolute',
+                            top: '15px',
+                            left: '15px'
+                        }} 
+                    />
+                </Box>
+                <Typography variant="h5" color="primary" sx={{ 
+                    mt: 3, 
+                    fontWeight: 'medium',
+                    textShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    letterSpacing: '1px'
+                }}>
                     Bilgiler yükleniyor...
                 </Typography>
-                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                <Typography variant="body2" color="textSecondary" sx={{ 
+                    mt: 1, 
+                    maxWidth: '80%', 
+                    textAlign: 'center',
+                    animation: `${fadeIn} 1s ease infinite alternate`,
+                    opacity: 0.8
+                }}>
                     {profileLoading ? 'Profil bilgileri alınıyor...' : ''}
                     {assignmentsLoading ? 'Ödev listesi alınıyor...' : ''}
                 </Typography>
@@ -567,35 +1040,74 @@ const StudentDashboard: React.FC = () => {
 
     if (profileError || assignmentsError) {
         return (
-            <Box m={2}>
-                <Alert severity="error">
-                    {profileError && 'Profil bilgileri alınamadı. '}
-                    {assignmentsError && 'Ödevler alınamadı. '}
-                    Lütfen tekrar deneyin.
-                </Alert>
-                <Button 
-                    variant="contained" 
-                    color="primary" 
-                    onClick={handleLogout}
-                    sx={{ mt: 2, mr: 2 }}
-                >
-                    Çıkış Yap
-                </Button>
-                <Button 
-                    variant="outlined" 
-                    onClick={refreshData}
-                    sx={{ mt: 2 }}
-                >
-                    Yeniden Dene
-                </Button>
-            </Box>
+            <PageContainer>
+                <Box maxWidth="600px" mx="auto" mt={10}>
+                    <Alert 
+                        severity="error"
+                        variant="filled"
+                        sx={{ 
+                            borderRadius: '12px', 
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
+                            mb: 3
+                        }}
+                    >
+                        {profileError && 'Profil bilgileri alınamadı. '}
+                        {assignmentsError && 'Ödevler alınamadı. '}
+                        Lütfen tekrar deneyin.
+                    </Alert>
+                    <Box display="flex" justifyContent="center" gap={2}>
+                        <GlowingButton 
+                            variant="contained" 
+                            color="primary" 
+                            onClick={handleLogout}
+                        >
+                            Çıkış Yap
+                        </GlowingButton>
+                        <Button 
+                            variant="outlined" 
+                            onClick={refreshData}
+                            sx={{ 
+                                borderRadius: '30px',
+                                borderWidth: '2px',
+                                '&:hover': {
+                                    borderWidth: '2px'
+                                }
+                            }}
+                        >
+                            Yeniden Dene
+                        </Button>
+                    </Box>
+                </Box>
+            </PageContainer>
         );
     }
 
     return (
-        <Box p={3} sx={{ backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+        <PageContainer>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h4" fontWeight="bold" color="primary">
+                <Typography 
+                    variant="h4" 
+                    fontWeight="bold" 
+                    color="primary"
+                    sx={{ 
+                        background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        textShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                        position: 'relative',
+                        display: 'inline-block',
+                        '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            bottom: '-5px',
+                            left: '0',
+                            width: '50%',
+                            height: '3px',
+                            background: `linear-gradient(90deg, ${theme.palette.primary.main}, transparent)`,
+                            borderRadius: '3px',
+                        }
+                    }}
+                >
                     Öğrenci Portali
                 </Typography>
                 <Box>
@@ -603,29 +1115,46 @@ const StudentDashboard: React.FC = () => {
                         variant="outlined" 
                         color="primary" 
                         onClick={refreshData}
-                        sx={{ borderRadius: '20px', px: 3, mr: 2 }}
+                        sx={{ 
+                            borderRadius: '30px', 
+                            px: 3, 
+                            mr: 2,
+                            borderWidth: '2px',
+                            '&:hover': {
+                                borderWidth: '2px',
+                                background: alpha(theme.palette.primary.main, 0.05)
+                            }
+                        }}
                     >
                         Yenile
                     </Button>
-                    <Button 
+                    <GlowingButton 
                         variant="contained" 
                         color="secondary" 
                         onClick={handleLogout}
-                        sx={{ borderRadius: '20px', px: 3 }}
                     >
                         Çıkış Yap
-                    </Button>
+                    </GlowingButton>
                 </Box>
             </Box>
             
             <Grid container spacing={3}>
                 <Grid sx={{ gridColumn: { xs: 'span 12', md: 'span 4' } }}>
-                    <StyledPaper>
-                        <Box textAlign="center">
+                    <ProfileCard elevation={3}>
+                        <ProfileContent textAlign="center">
                             <ProfileAvatar>
                                 {studentData?.user?.firstName?.charAt(0) || '?'}
                             </ProfileAvatar>
-                            <Typography variant="h5" fontWeight="bold" gutterBottom>
+                            <Typography 
+                                variant="h5" 
+                                fontWeight="bold" 
+                                gutterBottom
+                                sx={{ 
+                                    background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent'
+                                }}
+                            >
                                 {studentData?.user?.firstName 
                                     ? `${studentData.user.firstName} ${studentData.user.lastName || ''}`
                                     : 'İsim Bulunamadı'}
@@ -633,53 +1162,89 @@ const StudentDashboard: React.FC = () => {
                             <Chip 
                                 label="Öğrenci" 
                                 color="primary" 
-                                variant="outlined" 
-                                sx={{ mb: 2 }} 
+                                sx={{ 
+                                    mb: 2,
+                                    fontWeight: 'bold',
+                                    background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                    boxShadow: `0 2px 10px ${alpha(theme.palette.primary.main, 0.3)}`,
+                                    animation: `${pulse} 3s infinite`,
+                                    '& .MuiChip-label': {
+                                        color: 'white'
+                                    }
+                                }} 
                             />
-                        </Box>
+                        </ProfileContent>
                         
-                        <Divider sx={{ my: 2 }} />
+                        <Divider sx={{ my: 3 }} />
                         
                         <List>
-                            <ListItem>
-                                <Person color="primary" sx={{ mr: 2 }} />
+                            <InfoItem>
+                                <Person sx={{ color: theme.palette.primary.main, mr: 2 }} />
                                 <ListItemText 
-                                    primary="Kullanıcı Adı" 
+                                    primary={
+                                        <Typography variant="subtitle2" fontWeight="medium">
+                                            Kullanıcı Adı
+                                        </Typography>
+                                    }
                                     secondary={studentData?.user?.username || 'Belirtilmemiş'} 
                                 />
-                            </ListItem>
-                            <ListItem>
-                                <School color="primary" sx={{ mr: 2 }} />
+                            </InfoItem>
+                            <InfoItem>
+                                <School sx={{ color: theme.palette.primary.main, mr: 2 }} />
                                 <ListItemText 
-                                    primary="Bölüm" 
+                                    primary={
+                                        <Typography variant="subtitle2" fontWeight="medium">
+                                            Bölüm
+                                        </Typography>
+                                    }
                                     secondary={studentData?.department || 'Belirtilmemiş'} 
                                 />
-                            </ListItem>
-                            <ListItem>
-                                <Badge color="primary" sx={{ mr: 2 }} />
+                            </InfoItem>
+                            <InfoItem>
+                                <Badge sx={{ color: theme.palette.primary.main, mr: 2 }} />
                                 <ListItemText 
-                                    primary="Öğrenci Numarası" 
+                                    primary={
+                                        <Typography variant="subtitle2" fontWeight="medium">
+                                            Öğrenci Numarası
+                                        </Typography>
+                                    }
                                     secondary={studentData?.studentNumber || 'Belirtilmemiş'} 
                                 />
-                            </ListItem>
+                            </InfoItem>
                         </List>
-                    </StyledPaper>
+                    </ProfileCard>
                 </Grid>
                 
                 <Grid sx={{ gridColumn: { xs: 'span 12', md: 'span 8' } }}>
-                    <StyledPaper>
+                    <StyledPaper elevation={3}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                            <Typography variant="h5" fontWeight="bold">
-                                Ödevlerim
-                            </Typography>
-                            <Button 
+                            <Box display="flex" alignItems="center">
+                                <AssignmentIcon 
+                                    sx={{ 
+                                        mr: 1.5, 
+                                        color: theme.palette.primary.main,
+                                        fontSize: '2rem'
+                                    }} 
+                                />
+                                <Typography 
+                                    variant="h5" 
+                                    fontWeight="bold"
+                                    sx={{ 
+                                        background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.primary.main})`,
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent'
+                                    }}
+                                >
+                                    Ödevlerim
+                                </Typography>
+                            </Box>
+                            <GlowingButton 
                                 variant="contained" 
                                 startIcon={<UploadFile />}
                                 onClick={handleUploadDialog}
-                                sx={{ borderRadius: '20px' }}
                             >
                                 Yeni Ödev Yükle
-                            </Button>
+                            </GlowingButton>
                         </Box>
                         
                         <Divider sx={{ mb: 3 }} />
@@ -692,12 +1257,14 @@ const StudentDashboard: React.FC = () => {
                                         sx={{ gridColumn: { xs: 'span 12', sm: 'span 6' } }}
                                     >
                                         <AssignmentCard>
-                                            <CardContent>
+                                            <CardGradient className="card-gradient" />
+                                            <AssignmentShine className="assignment-shine" />
+                                            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
                                                 <CardTitle variant="h6">
                                                     {assignment.title || 'İsimsiz Ödev'}
                                                 </CardTitle>
                                                 <Box display="flex" alignItems="center" mb={1}>
-                                                    <CalendarMonth fontSize="small" color="action" sx={{ mr: 1 }} />
+                                                    <CalendarMonth fontSize="small" sx={{ mr: 1, color: theme.palette.primary.main }} />
                                                     <Typography variant="body2" color="text.secondary">
                                                         {assignment.submissionDate ? 
                                                             new Date(assignment.submissionDate).toLocaleDateString('tr-TR') : 
@@ -709,8 +1276,14 @@ const StudentDashboard: React.FC = () => {
                                                 </Typography>
                                                 
                                                 {assignment.feedback && (
-                                                    <Box mt={2}>
-                                                        <Typography variant="subtitle2" color="primary">
+                                                    <Box 
+                                                        mt={2} 
+                                                        p={1.5} 
+                                                        bgcolor={alpha(theme.palette.primary.light, 0.1)}
+                                                        borderRadius={1}
+                                                        border={`1px solid ${alpha(theme.palette.primary.main, 0.1)}`}
+                                                    >
+                                                        <Typography variant="subtitle2" color="primary" fontWeight="bold">
                                                             Geri Bildirim:
                                                         </Typography>
                                                         <Typography variant="body2">
@@ -726,15 +1299,32 @@ const StudentDashboard: React.FC = () => {
                                                             color={assignment.grade >= 70 ? "success" : 
                                                                   assignment.grade >= 50 ? "warning" : "error"}
                                                             size="small"
+                                                            sx={{ 
+                                                                fontWeight: 'bold',
+                                                                boxShadow: `0 2px 8px ${alpha(
+                                                                    assignment.grade >= 70 ? theme.palette.success.main : 
+                                                                    assignment.grade >= 50 ? theme.palette.warning.main : 
+                                                                    theme.palette.error.main, 0.3
+                                                                )}`
+                                                            }}
                                                         />
                                                     </Box>
                                                 )}
                                             </CardContent>
-                                            <CardActions>
+                                            <CardActions sx={{ p: 2, pt: 0 }}>
                                                 <Button 
                                                     startIcon={<Download />}
                                                     size="small"
                                                     onClick={() => handleDownload(assignment.id)}
+                                                    sx={{ 
+                                                        borderRadius: '20px',
+                                                        background: alpha(theme.palette.primary.main, 0.08),
+                                                        transition: 'all 0.2s ease',
+                                                        '&:hover': {
+                                                            background: alpha(theme.palette.primary.main, 0.15),
+                                                            transform: 'translateY(-2px)'
+                                                        }
+                                                    }}
                                                 >
                                                     İndir
                                                 </Button>
@@ -749,14 +1339,14 @@ const StudentDashboard: React.FC = () => {
                                     {assignmentsLoading ? 'Ödevler yükleniyor...' : 'Henüz ödev bulunmuyor.'}
                                 </Typography>
                                 {!assignmentsLoading && (
-                                    <Button 
-                                        variant="outlined" 
+                                    <GlowingButton 
+                                        variant="contained" 
                                         startIcon={<UploadFile />}
                                         onClick={handleUploadDialog}
-                                        sx={{ mt: 2, borderRadius: '20px' }}
+                                        sx={{ mt: 2 }}
                                     >
                                         İlk Ödevini Yükle
-                                    </Button>
+                                    </GlowingButton>
                                 )}
                             </Box>
                         )}
@@ -764,8 +1354,32 @@ const StudentDashboard: React.FC = () => {
                 </Grid>
             </Grid>
             
-            <Dialog open={uploadDialogOpen} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-                <DialogTitle>Yeni Ödev Yükle</DialogTitle>
+            <Dialog 
+                open={uploadDialogOpen} 
+                onClose={handleCloseDialog} 
+                maxWidth="sm" 
+                fullWidth
+                PaperProps={{
+                    sx: StyledDialogPaper
+                }}
+                TransitionProps={{
+                    timeout: 700
+                }}
+            >
+                <DialogTitle>
+                    <Box display="flex" alignItems="center">
+                        <UploadFile 
+                            sx={{ 
+                                mr: 1.5, 
+                                color: theme.palette.primary.main,
+                                fontSize: '2rem'
+                            }} 
+                        />
+                        <GradientText variant="h6" fontWeight="bold">
+                            Yeni Ödev Yükle
+                        </GradientText>
+                    </Box>
+                </DialogTitle>
                 <DialogContent>
                     <TextField
                         autoFocus
@@ -775,7 +1389,21 @@ const StudentDashboard: React.FC = () => {
                         required
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        sx={{ mb: 2 }}
+                        sx={{ 
+                            mb: 2,
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                transition: 'transform 0.2s ease',
+                                '&.Mui-focused': {
+                                    transform: 'translateY(-3px)',
+                                    boxShadow: (theme: Theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.15)}`,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderWidth: '2px',
+                                    borderColor: (theme: Theme) => theme.palette.primary.main
+                                }
+                            } 
+                        }}
                     />
                     <TextField
                         margin="dense"
@@ -785,13 +1413,43 @@ const StudentDashboard: React.FC = () => {
                         rows={4}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        sx={{ mb: 2 }}
+                        sx={{ 
+                            mb: 2,
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: '12px',
+                                transition: 'transform 0.2s ease',
+                                '&.Mui-focused': {
+                                    transform: 'translateY(-3px)',
+                                    boxShadow: (theme: Theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.15)}`,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderWidth: '2px',
+                                    borderColor: (theme: Theme) => theme.palette.primary.main
+                                }
+                            }
+                        }}
                     />
                     <Button
                         variant="outlined"
                         component="label"
                         fullWidth
-                        sx={{ mt: 1 }}
+                        startIcon={<UploadFile />}
+                        sx={{ 
+                            mt: 1,
+                            py: 1.5,
+                            borderRadius: '12px',
+                            borderWidth: '2px',
+                            borderStyle: 'dashed',
+                            transition: 'all 0.3s ease',
+                            background: (theme: Theme) => alpha(theme.palette.primary.light, 0.05),
+                            '&:hover': {
+                                borderWidth: '2px',
+                                borderStyle: 'dashed',
+                                background: (theme: Theme) => alpha(theme.palette.primary.light, 0.1),
+                                transform: 'translateY(-3px)',
+                                boxShadow: (theme: Theme) => `0 6px 20px ${alpha(theme.palette.primary.main, 0.1)}`,
+                            }
+                        }}
                     >
                         Dosya Seç
                         <input
@@ -801,23 +1459,58 @@ const StudentDashboard: React.FC = () => {
                         />
                     </Button>
                     {file && (
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                            Seçilen dosya: {file.name}
-                        </Typography>
+                        <Box 
+                            mt={2} 
+                            p={1.5} 
+                            bgcolor={(theme: Theme) => alpha(theme.palette.success.light, 0.1)}
+                            borderRadius={1}
+                            border={(theme: Theme) => `1px solid ${alpha(theme.palette.success.main, 0.2)}`}
+                            display="flex"
+                            alignItems="center"
+                            sx={{
+                                animation: `${fadeIn} 0.5s ease`,
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    transform: 'translateY(-3px)',
+                                    boxShadow: (theme: Theme) => `0 6px 15px ${alpha(theme.palette.success.main, 0.1)}`,
+                                }
+                            }}
+                        >
+                            <AssignmentIcon sx={{ mr: 1, color: (theme: Theme) => theme.palette.success.main }} />
+                            <Typography variant="body2">
+                                Seçilen dosya: <strong>{file.name}</strong>
+                            </Typography>
+                        </Box>
                     )}
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog}>İptal</Button>
+                <DialogActions sx={{ p: 2.5 }}>
                     <Button 
-                        onClick={handleUpload} 
-                        variant="contained" 
+                        onClick={handleCloseDialog}
+                        sx={{ 
+                            borderRadius: '30px',
+                            px: 2,
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                                transform: 'translateY(-3px)',
+                                boxShadow: (theme: Theme) => `0 4px 10px ${alpha(theme.palette.primary.main, 0.15)}`,
+                            }
+                        }}
+                    >
+                        İptal
+                    </Button>
+                    <GlowingButton 
+                        onClick={handleUpload}
                         disabled={!file || !title}
+                        sx={{
+                            opacity: (!file || !title) ? 0.6 : 1,
+                            transition: 'all 0.3s ease',
+                        }}
                     >
                         Yükle
-                    </Button>
+                    </GlowingButton>
                 </DialogActions>
             </Dialog>
-        </Box>
+        </PageContainer>
     );
 };
 

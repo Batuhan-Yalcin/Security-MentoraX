@@ -90,6 +90,33 @@ interface AssignmentRawResponse {
     [key: string]: any; // Diğer alanlar için
 }
 
+// Sonsuz iç içe geçmiş JSON'ı düzelten yardımcı fonksiyon
+const cleanNestedJson = (jsonStr: string): string => {
+    console.log('Sonsuz iç içe geçmiş JSON temizleniyor...');
+    
+    // Sonsuz iç içe geçmiş user nesnelerini temizle
+    let cleaned = jsonStr
+        // student.user içindeki sonsuz döngüyü kır
+        .replace(/("student":\s*\{\s*"id":\s*\d+\s*,\s*"user":\s*\{[^}]*\}\s*)[^}]*student[^}]*student/g, '$1')
+        // mentor.user içindeki sonsuz döngüyü kır
+        .replace(/("mentor":\s*\{\s*"id":\s*\d+\s*,\s*"user":\s*\{[^}]*\}\s*)[^}]*mentor[^}]*mentor/g, '$1');
+        
+    // Eksik kapanış parantezleri ekleyelim
+    // Eğer parantez sayıları eşleşmiyorsa
+    const openBraces = (cleaned.match(/\{/g) || []).length;
+    const closeBraces = (cleaned.match(/\}/g) || []).length;
+    
+    if (openBraces > closeBraces) {
+        const diff = openBraces - closeBraces;
+        for (let i = 0; i < diff; i++) {
+            cleaned += '}';
+        }
+    }
+    
+    console.log('JSON temizlendi, parse edilebilir halde');
+    return cleaned;
+};
+
 // api.ts'deki URL konfigürasyonunda başında / olduğu için burada / koymuyoruz
 // Ayrıca var olan api URL'deki çifte slash sorununu düzeltelim
 // api servisinde URL sonunda / olduğu için burada başında / olmamalı
@@ -150,13 +177,14 @@ const MentorDashboard: React.FC = () => {
                 console.log('Token durumu:', localStorage.getItem('token') ? 'Var' : 'Yok');
                 console.log('Role durumu:', localStorage.getItem('role'));
                 
-                // MentorAssignmentController'daki endpointi kullan
+                // Orijinal endpoint'i kullanalım (all-students yerine students)
                 const response = await api.get('mentor/students');
                 console.log('Öğrenciler alındı, ham veri:', response.data);
+                console.log('Veri tipi:', typeof response.data);
                 
                 // Backend'den gelen veri dizi formatında ise doğrudan kullan
                 if (Array.isArray(response.data)) {
-                    return response.data.map((user: any) => ({
+                    const mappedData = response.data.map((user: any) => ({
                         id: user.id,
                         username: user.username || '',
                         firstName: user.firstName || '',
@@ -164,16 +192,26 @@ const MentorDashboard: React.FC = () => {
                         email: user.email || '',
                         studentNumber: user.student?.studentNumber || `S${user.id}`
                     }));
+                    console.log('İşlenmiş öğrenci verileri:', mappedData);
+                    console.log('İşlenmiş öğrenci sayısı:', mappedData.length);
+                    return mappedData;
                 }
                 
                 // String olarak gelen veriyi işle
                 if (typeof response.data === 'string') {
                     try {
                         console.log('Ham veri string formatında, JSON parse denenecek...');
+                        
+                        // Sonsuz iç içe geçmiş yapıları temizle
+                        const cleanedData = cleanNestedJson(response.data);
+                        
                         // JSON olarak parse etmeyi dene
-                        const parsedData = JSON.parse(response.data);
+                        const parsedData = JSON.parse(cleanedData);
+                        console.log('Parse edilmiş veri:', parsedData);
+                        console.log('Parse edilmiş veri türü:', Array.isArray(parsedData) ? 'Array' : typeof parsedData);
+                        
                         if (Array.isArray(parsedData)) {
-                            return parsedData.map((user: any) => ({
+                            const mappedData = parsedData.map((user: any) => ({
                                 id: user.id,
                                 username: user.username || '',
                                 firstName: user.firstName || '',
@@ -181,6 +219,10 @@ const MentorDashboard: React.FC = () => {
                                 email: user.email || '',
                                 studentNumber: user.student?.studentNumber || `S${user.id}`
                             }));
+                            console.log('Parse edilmiş ve işlenmiş öğrenci sayısı:', mappedData.length);
+                            return mappedData;
+                        } else {
+                            console.error('Parse edilmiş veri bir dizi değil:', parsedData);
                         }
                     } catch (parseError) {
                         console.error('JSON parse hatası, regex ile çözmeye çalışılacak:', parseError);
@@ -207,23 +249,40 @@ const MentorDashboard: React.FC = () => {
                         const studentIds = new Set<number>();
                         
                         allIds.forEach(id => {
-                            // Bu ID bir öğrenci mi? Kontrol et
-                            const isStudentRegex = new RegExp(`"id":${id}[^}]*?"role":"STUDENT"`, 'g');
-                            if (isStudentRegex.test(response.data)) {
+                            // Bu ID bir öğrenci mi? Kontrol et - ROLE kontrolünü daha esnek yapalım
+                            // İyileştirilmiş regex - role kontrolünü farklı şekillerde de yakalayabilmek için
+                            const isStudentRegex = new RegExp(`"id":${id}[^}]*?"role"\\s*:\\s*"STUDENT"`, 'g');
+                            const isStudentRegex2 = new RegExp(`"student"\\s*:\\s*\\{[^}]*?"id"\\s*:\\s*${id}`, 'g');
+                            
+                            if (isStudentRegex.test(response.data) || isStudentRegex2.test(response.data)) {
                                 studentIds.add(id);
                             }
                         });
                         
                         console.log('Bulunan öğrenci ID sayısı:', studentIds.size);
                         
+                        // Daha kapsamlı bir yaklaşımla, öğrenci rolü olan tüm kullanıcıları bulmak için
+                        // Tüm ROLE:STUDENT kullanıcılarını bul
+                        const studentRoleRegex = /"role"\s*:\s*"STUDENT"[^{]*?(?:"id"\s*:\s*(\d+))/g;
+                        let studentRoleMatch;
+                        
+                        while ((studentRoleMatch = studentRoleRegex.exec(response.data)) !== null) {
+                            if (studentRoleMatch[1]) {
+                                const id = parseInt(studentRoleMatch[1]);
+                                if (id > 0) studentIds.add(id);
+                            }
+                        }
+                        
+                        console.log('Rol tabanlı bulunan toplam öğrenci ID sayısı:', studentIds.size);
+                        
                         // Her öğrenci ID'si için bilgileri bul
                         studentIds.forEach(id => {
-                            // Kullanıcı adını bul
-                            const usernameRegex = new RegExp(`"id":${id}[^}]*?"username":"([^"]+)"`, 'g');
+                            // Kullanıcı adını bul - daha esnek bir regex kullanalım
+                            const usernameRegex = new RegExp(`"id"\\s*:\\s*${id}[^}]*?"username"\\s*:\\s*"([^"]+)"`, 'g');
                             const usernameMatch = usernameRegex.exec(response.data);
                             
-                            // Ad, soyad ve email bul
-                            const detailsRegex = new RegExp(`"id":${id}[^}]*?"firstName":"([^"]+)"[^}]*?"lastName":"([^"]+)"[^}]*?"email":"([^"]+)"`, 'g');
+                            // Ad, soyad ve email bul - daha esnek bir regex
+                            const detailsRegex = new RegExp(`"id"\\s*:\\s*${id}[^}]*?"firstName"\\s*:\\s*"([^"]+)"[^}]*?"lastName"\\s*:\\s*"([^"]+)"[^}]*?"email"\\s*:\\s*"([^"]+)"`, 'g');
                             const detailsMatch = detailsRegex.exec(response.data);
                             
                             const username = usernameMatch ? usernameMatch[1] : `student${id}`;
@@ -363,8 +422,12 @@ const MentorDashboard: React.FC = () => {
                 if (typeof response.data === 'string') {
                     try {
                         console.log('Ham veri string formatında, JSON parse denenecek...');
+                        
+                        // Sonsuz iç içe geçmiş yapıları temizle
+                        const cleanedData = cleanNestedJson(response.data);
+                        
                         // JSON olarak parse etmeyi dene
-                        const parsedData = JSON.parse(response.data);
+                        const parsedData = JSON.parse(cleanedData);
                         if (Array.isArray(parsedData)) {
                             return parsedData.map((assignment: any) => ({
                                 id: assignment.id,

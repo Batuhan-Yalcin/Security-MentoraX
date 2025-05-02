@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.batuhanyalcin.model.Assignment;
 import com.batuhanyalcin.model.User;
 import com.batuhanyalcin.service.MentorAssignmentService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -36,6 +36,14 @@ public class MentorAssignmentController {
     @ApiResponse(responseCode = "200", description = "Öğrenciler başarıyla listelendi")
     @ApiResponse(responseCode = "401", description = "Yetkisiz erişim")
     public ResponseEntity<List<User>> getStudents() {
+        return ResponseEntity.ok(mentorAssignmentService.getAllMentorStudents());
+    }
+
+    @GetMapping("/all-students")
+    @Operation(summary = "Tüm öğrencileri listele (gelişmiş)", description = "Mentora bağlı tüm öğrencileri farklı bir yöntemle listeler")
+    @ApiResponse(responseCode = "200", description = "Öğrenciler başarıyla listelendi")
+    @ApiResponse(responseCode = "401", description = "Yetkisiz erişim")
+    public ResponseEntity<List<User>> getAllStudents() {
         return ResponseEntity.ok(mentorAssignmentService.getStudentIds());
     }
 

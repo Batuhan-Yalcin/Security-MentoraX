@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.batuhanyalcin.model.User;
@@ -18,4 +20,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByRole(UserRole role);
     List<User> findByFirstNameContainingOrLastNameContaining(String firstName, String lastName);
     List<User> findByStudentMentorUserUsername(String mentorUsername);
+    @Query("SELECT u FROM User u JOIN u.student s WHERE s.mentor.user.username = :mentorUsername")
+    List<User> findAllStudentsByMentorUsername(@Param("mentorUsername") String mentorUsername);
 }

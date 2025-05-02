@@ -7,6 +7,7 @@ import com.batuhanyalcin.model.User;
 
 public interface MentorAssignmentService {
     List<User> getStudentIds();
+    List<User> getAllMentorStudents();
     List<Assignment> getStudentAssignments(Long studentId);
     Assignment addFeedback(Long id, String feedback, Integer grade);
 } 
